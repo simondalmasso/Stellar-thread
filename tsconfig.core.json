@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "skipLibCheck": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src/lib",
+    "outDir": ".build-core",
+    "declaration": false
+  },
+  "include": [
+    "src/lib/truth.ts",
+    "src/lib/astronomy.ts",
+    "src/lib/cmp.ts",
+    "src/lib/candidate.ts",
+    "src/lib/targets.ts"
+  ]
+}
