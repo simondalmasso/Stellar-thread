@@ -11,7 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with:
+          node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run test:core
       - run: npm run typecheck
@@ -33,7 +34,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: '3.13' }
+        with:
+          python-version: '3.13'
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ./listener
       - run: python -m unittest discover -s listener/tests -p 'test_*.py' -v
