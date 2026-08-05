@@ -10,13 +10,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install --no-audit --no-fund
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --no-audit --no-fund
       - run: npm run test:core && npm run typecheck && npm run build
-      - name: Deploy public web and API only
-        run: npx wrangler deploy
+      - run: npm run build:manifest
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          APP_ENV: production
+      - name: Apply D1 migrations
+        run: npx wrangler d1 migrations apply DB --remote
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy public web and API only
+        run: npx wrangler deploy --var BUILD_SOURCE_SHA:${{ github.sha }} --var BUILD_TREE_SHA:$(git rev-parse HEAD^{tree}) --var BUILD_TIME_UTC:$(date -u +%FT%TZ)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPERATOR_API_TOKEN: ${{ secrets.OPERATOR_API_TOKEN }}
           ALLOW_PHYSICAL_TRANSMISSION: 'false'
