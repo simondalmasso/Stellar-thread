@@ -2,7 +2,7 @@ name: Materialize Reality V2 source
 on:
   push:
     branches: [agent/stellar-thread-complete-product]
-    paths: [.reality-v2/source.tar.gz.b64]
+    paths: [.reality-v2/ready]
 permissions:
   contents: write
 jobs:
@@ -15,7 +15,9 @@ jobs:
           fetch-depth: 0
       - name: Verify and materialize audited source
         run: |
-          base64 --decode .reality-v2/source.tar.gz.b64 > /tmp/reality-v2.tar.gz
+          cat .reality-v2/part-* > /tmp/reality-v2.tar.gz.b64
+          echo 'fbbdeee512198ad077d15c94c378dc8f99ec20abb8102acee526b4130a6b460a  /tmp/reality-v2.tar.gz.b64' | sha256sum --check -
+          base64 --decode /tmp/reality-v2.tar.gz.b64 > /tmp/reality-v2.tar.gz
           echo 'e0c9cdc757e44a5f051daeffb2e08fea6156062b1e4e1042dbfd5f9cc5038b46  /tmp/reality-v2.tar.gz' | sha256sum --check -
           tar -xzf /tmp/reality-v2.tar.gz -C .
           rm -rf .reality-v2 .github/workflows/materialize-reality-v2.yml source-head.txt source-tree.txt
