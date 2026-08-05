@@ -106,7 +106,7 @@ jobs:
         with: { ref: '${{ env.SOURCE_SHA }}' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.13', cache: pip }
-      - run: python -m pip install -c listener/constraints.txt numpy h5py
+      - run: python -m pip install -c listener/constraints.txt numpy h5py hdf5plugin
       - name: Download public Berkeley Voyager control
         run: |
           mkdir -p authentic-source
