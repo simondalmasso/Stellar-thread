@@ -1,17 +1,2 @@
-import { emeRoundTripSeconds } from '../lib/astronomy';
-
-export function MoonRelay() {
-  const delay = emeRoundTripSeconds();
-  return <section className="moon-card">
-    <div className="panel-title"><span>MOON RELAY CHAT</span><span className="gate">OPERATOR GATE</span></div>
-    <div className="moon-orbit"><div className="earth-dot"/><div className="beam"/><div className="moon-dot"/></div>
-    <dl>
-      <div><dt>Geometry</dt><dd>Earth → Moon → Earth</dd></div>
-      <div><dt>Mean path</dt><dd>768,800 km</dd></div>
-      <div><dt>Vacuum RTT</dt><dd>{delay.toFixed(3)} s</dd></div>
-      <div><dt>RF state</dt><dd>NOT TRANSMITTED</dd></div>
-      <div><dt>Facility</dt><dd>AWAITING AUTHORIZED STATION</dd></div>
-    </dl>
-    <button disabled>EXPORT STATION PACKAGE — FACILITY REQUIRED</button>
-  </section>;
-}
+import{useState}from'react';
+export function MoonRelay(){const[mode,setMode]=useState<'mean'|'ephemeris'>('mean');return <section className="moon-v2"><header><div><small>EARTH–MOON–EARTH</small><h2>Moon Relay planning</h2></div><select value={mode} onChange={e=>setMode(e.target.value as 'mean'|'ephemeris')}><option value="mean">MEAN_DISTANCE_DEMONSTRATOR</option><option value="ephemeris">EPHEMERIS_DERIVED_PLAN</option></select></header><div className="moon-route"><i className="earth"/><span/><i className="moon"/><span/><i className="earth return"/></div>{mode==='mean'?<dl><div><dt>Range fallback</dt><dd>384,400 km</dd></div><div><dt>Round-trip light time</dt><dd>≈ 2.565 s</dd></div><div><dt>Truth</dt><dd>DERIVED / EDUCATIONAL</dd></div></dl>:<dl><div><dt>Adapter</dt><dd>JPL Horizons API</dd></div><div><dt>Required input</dt><dd>UTC, station lat/lon/elevation, frequency</dd></div><div><dt>Output</dt><dd>Az/El, range, range-rate, light-time, Doppler, raw snapshot hash</dd></div><div><dt>Status</dt><dd>NETWORK PLAN — NO TRANSMITTER CONTROL</dd></div></dl>}<p>OPERATOR_RECORDED_SESSION remains unavailable until an authorized physical session produces evidence.</p></section>}

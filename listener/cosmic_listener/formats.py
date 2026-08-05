@@ -19,7 +19,7 @@ def load_sigmf(meta_path: str | Path) -> tuple[np.ndarray, dict[str, object]]:
     datatype = metadata.get("global", {}).get("core:datatype")
     if datatype not in {"cf32_le", "cf32"}:
         raise ValueError("Reference adapter currently supports SigMF cf32_le only")
-    data_path = meta_p.with_suffix("").with_suffix(".sigmf-data") if meta_p.name.endswith(".sigmf-meta") else meta_p.with_suffix(".sigmf-data")
+    data_path = meta_p.with_name(meta_p.name[: -len(".sigmf-meta")] + ".sigmf-data") if meta_p.name.endswith(".sigmf-meta") else meta_p.with_name(meta_p.name + ".sigmf-data")
     data = np.fromfile(data_path, dtype=np.complex64)
     return data, {"format": "SigMF", "metadata": metadata, "path": str(data_path), "truth_class": "RECORDED_AUTHENTIC"}
 

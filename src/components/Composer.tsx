@@ -1,32 +1,14 @@
 import { useMemo, useState } from 'react';
-import { encodeMessage } from '../api';
-import type { CmpFrame, CmpProfile } from '../lib/cmp';
+import { encodeCmp1, type CmpFrame, type CmpProfile } from '../lib/cmp';
 import type { Target } from '../lib/targets';
-
-const profiles: CmpProfile[] = ['CMP_BEACON','CMP_MATH_BOOTSTRAP','CMP_TEXT','CMP_REPLY_REQUEST'];
-
-export function Composer({ target, onEncoded }: { target: Target; onEncoded(frame: CmpFrame): void }) {
-  const [message, setMessage] = useState('Hola desde la Tierra. Esta señal describe números, tiempo y nuestro origen.');
-  const [profile, setProfile] = useState<CmpProfile>('CMP_TEXT');
-  const [busy, setBusy] = useState(false);
-  const estimate = useMemo(() => Math.max(1, new TextEncoder().encode(message).length * 8 * 3), [message]);
-  async function submit() {
-    setBusy(true);
-    try {
-      const result = await encodeMessage({ message, targetId: target.id, profile });
-      onEncoded(result.data);
-    } finally { setBusy(false); }
-  }
-  return <section className="composer">
-    <div className="panel-title"><span>MESSAGE LAB / CMP-1</span><span className="gate">PREPARATION ONLY</span></div>
-    <textarea value={message} onChange={e => setMessage(e.target.value)} maxLength={2048} aria-label="Mensaje humano" />
-    <div className="composer-row">
-      <select value={profile} onChange={e => setProfile(e.target.value as CmpProfile)} aria-label="Perfil CMP">
-        {profiles.map(p => <option key={p}>{p}</option>)}
-      </select>
-      <span>{estimate.toLocaleString()} encoded bits</span>
-      <button onClick={submit} disabled={busy || !message.trim()}>{busy ? 'ENCODING…' : 'ENCODE MESSAGE'}</button>
-    </div>
-    <p className="microcopy">No transmission is triggered. The output is a verifiable preparation artifact for operator review.</p>
-  </section>;
+export function estimateCmpBits(message:string,targetId:string){return Math.max(1,(24+new TextEncoder().encode(targetId).length+new TextEncoder().encode(message).length)*8*3)}
+export function Composer({target,onEncoded}:{target:Target;onEncoded:(frame:CmpFrame)=>void}){
+ const[message,setMessage]=useState('Hola desde la Tierra. Este mensaje fue preparado con evidencia y paciencia.');const[profile,setProfile]=useState<CmpProfile>('CMP_TEXT');
+ const estimate=useMemo(()=>estimateCmpBits(message,target.id),[message,target.id]);
+ return <section className="composer-card" aria-label="Compositor de mensaje">
+  <div className="composer-heading"><div><span>Nuevo mensaje para</span><strong>{target.displayName}</strong></div><span className="earth-status">EN LA TIERRA</span></div>
+  <textarea value={message} maxLength={65535} onChange={e=>setMessage(e.target.value)} aria-label="Mensaje humano" placeholder="Escribí un mensaje…" />
+  <div className="composer-controls"><label>Perfil CMP<select value={profile} onChange={e=>setProfile(e.target.value as CmpProfile)}><option>CMP_TEXT</option><option>CMP_MATH_BOOTSTRAP</option><option>CMP_BEACON</option><option>CMP_REPLY_REQUEST</option></select></label><span><b>{estimate.toLocaleString()}</b> bits codificados</span><button disabled={!message.trim()} onClick={()=>onEncoded(encodeCmp1({message,targetId:target.id,profile}))}>Codificar mensaje</button></div>
+  <p>Codificar no transmite. Una propuesta, estación autorizada y prueba instrumental son pasos separados.</p>
+ </section>
 }

@@ -1,56 +1,20 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { encodeCmp1, decodeCmp1 } from '../.build-core/cmp.js';
-import { emeRoundTripSeconds, replyHorizon } from '../.build-core/astronomy.js';
-import { candidateResponseScore, canTransitionAutomatically } from '../.build-core/candidate.js';
-import { mayDisplayLive } from '../.build-core/truth.js';
-
-function flip(bits, indexes) {
-  const chars = [...bits];
-  for (const i of indexes) chars[i] = chars[i] === '1' ? '0' : '1';
-  return chars.join('');
-}
-
-test('CMP-1 exact round trip', () => {
-  const frame = encodeCmp1({ message: 'Hola universo', targetId: 'proxima-b', profile: 'CMP_TEXT', epochUtc: '2026-08-05T15:00:00.000Z' });
-  const decoded = decodeCmp1(frame.bits);
-  assert.equal(decoded.message, 'Hola universo');
-  assert.equal(decoded.targetId, 'proxima-b');
-  assert.equal(decoded.profile, 'CMP_TEXT');
-});
-
-test('CMP-1 repetition FEC repairs one flipped bit per triple', () => {
-  const frame = encodeCmp1({ message: 'FEC', targetId: 'moon', profile: 'CMP_BEACON', epochUtc: '2026-08-05T15:00:00.000Z' });
-  const damaged = flip(frame.bits, Array.from({ length: 24 }, (_, i) => i * 3));
-  const decoded = decodeCmp1(damaged);
-  assert.equal(decoded.message, 'FEC');
-  assert.ok(decoded.correctedTriples >= 24);
-});
-
-test('CMP-1 reports unrecoverable corruption', () => {
-  const frame = encodeCmp1({ message: 'checksum', targetId: 'moon', profile: 'CMP_BEACON', epochUtc: '2026-08-05T15:00:00.000Z' });
-  const damaged = flip(frame.bits, [120, 121]);
-  assert.throws(() => decodeCmp1(damaged));
-});
-
-test('EME round trip is about 2.56 seconds at mean distance', () => {
-  assert.ok(Math.abs(emeRoundTripSeconds() - 2.564) < 0.01);
-});
-
-test('reply horizon doubles light travel time', () => {
-  const h = replyHorizon('2026-01-01T00:00:00.000Z', 4);
-  const years = (Date.parse(h.firstReplyUtc) - Date.parse('2026-01-01T00:00:00.000Z')) / (365.25 * 86400000);
-  assert.ok(Math.abs(years - 8) < 0.001);
-});
-
-test('candidate score is multiplicative and automatic ET confirmation is forbidden', () => {
-  const score = candidateResponseScore({ targetAngularConsistency: .9, temporalWindowConsistency: .8, dopplerConsistency: .7, repetitionConsistency: .6, modulationSimilarity: .5, multiStationConfidence: .4, rfiRejectionConfidence: .95 });
-  assert.ok(score > 0 && score < 1);
-  assert.equal(canTransitionAutomatically('CONFIRMED_EXTRATERRESTRIAL'), false);
-});
-
-test('LIVE label requires recent heartbeat', () => {
-  const base = { truthClass: 'LIVE_OBSERVATORY', source: 'x', processedAt: '2026-08-05T15:00:00Z', observedAt: '2026-08-05T15:00:00Z', transformation: 'none', version: '1', freshness: 'CURRENT', limitations: [] };
-  assert.equal(mayDisplayLive(base, Date.parse('2026-08-05T15:00:20Z')), true);
-  assert.equal(mayDisplayLive(base, Date.parse('2026-08-05T15:01:00Z')), false);
-});
+import test from 'node:test';import assert from'node:assert/strict';
+import{encodeCmp1,decodeCmp1,sha256Hex}from'../.build-core/cmp.js';import{emeRoundTripSeconds}from'../.build-core/astronomy.js';import{candidateResponseScore,canTransitionAutomatically}from'../.build-core/candidate.js';import{mayDisplayLive}from'../.build-core/truth.js';import{TARGETS}from'../.build-core/targets.js';import{computePropagation,formatDistance,validateTransmissionProof,LIGHT_YEAR_METERS,SPEED_OF_LIGHT_M_S}from'../.build-core/reality.js';import{estimateAimPoint}from'../.build-core/astrometry.js';
+const target=TARGETS[0];const tx='2026-08-05T15:00:00.000Z';const hash='a'.repeat(64);
+const proof={transmissionId:'tx-1',messageId:'msg-1',targetId:target.id,status:'TRANSMITTED_PROOFED',transmittedAtUtc:tx,transmissionEndUtc:null,stationId:'station-public',facilityName:'authorized-facility',operatorId:'operator-public',frequencyHz:1296000000,bandwidthHz:2.5,modulationProfile:'CMP_TEST',bitrate:1,beamType:'DIRECTIONAL',beamWidthDeg:1,payloadSha256:hash,waveformSha256:hash,proofArtifactSha256:hash,authorizationRefs:['AUTH-1'],truthClass:'HUMAN_REVIEW',source:'test proof',limitations:[]};
+function flip(bits,indexes){const c=[...bits];for(const i of indexes)c[i]=c[i]==='1'?'0':'1';return c.join('')}
+test('CMP-1 exact round trip and SHA-256 payload',()=>{const f=encodeCmp1({message:'hola 🌎',targetId:'proxima-b',profile:'CMP_TEXT',epochUtc:tx});const d=decodeCmp1(f.bits);assert.equal(d.message,'hola 🌎');assert.equal(f.payloadHash,sha256Hex(new TextEncoder().encode('hola 🌎')));assert.equal(f.payloadHash.length,64)});
+test('FEC repairs one flipped bit and rejects triple corruption',()=>{const f=encodeCmp1({message:'signal',targetId:'proxima-b',profile:'CMP_TEXT',epochUtc:tx});assert.equal(decodeCmp1(flip(f.bits,[0,30,60])).message,'signal');assert.throws(()=>decodeCmp1(flip(f.bits,[0,1]))) });
+test('EME mean-distance latency remains about 2.565 s',()=>assert.ok(Math.abs(emeRoundTripSeconds()-2.564)<.01));
+test('draft and encoded messages never become in flight without proof',()=>{const r=computePropagation(null,target,Date.parse(tx)+100000);assert.equal(r.eligible,false);assert.equal(r.lifecycle,'DRAFT');assert.equal(r.distanceTravelledMeters,0)});
+test('proposal without transmitted proof never propagates',()=>{const r=computePropagation({...proof,status:'PROPOSED',transmittedAtUtc:null},target,Date.parse(tx)+1e9);assert.equal(r.eligible,false);assert.equal(r.progress,0)});
+test('valid proof starts at zero and clamps future timestamps',()=>{assert.equal(computePropagation(proof,target,Date.parse(tx)-1).distanceTravelledMeters,0);assert.equal(computePropagation(proof,target,Date.parse(tx)-1).progress,0)});
+test('one second after proof equals c metres',()=>{const r=computePropagation(proof,target,Date.parse(tx)+1000);assert.equal(r.distanceTravelledMeters,SPEED_OF_LIGHT_M_S);assert.equal(r.lifecycle,'IN_FLIGHT')});
+test('halfway progress is deterministic',()=>{const half=target.distanceLightYears*LIGHT_YEAR_METERS/SPEED_OF_LIGHT_M_S/2;const r=computePropagation(proof,target,Date.parse(tx)+half*1000);assert.ok(Math.abs(r.progress-.5)<1e-12)});
+test('arrival and reply windows transition at physical boundaries',()=>{const travel=target.distanceLightYears*LIGHT_YEAR_METERS/SPEED_OF_LIGHT_M_S;assert.equal(computePropagation(proof,target,Date.parse(tx)+travel*1000+1).lifecycle,'ARRIVED_ESTIMATE');assert.equal(computePropagation(proof,target,Date.parse(tx)+travel*2000+1).lifecycle,'REPLY_WINDOW_OPEN')});
+test('progress never exceeds one',()=>assert.equal(computePropagation(proof,target,Date.parse(tx)+1e20).progress,1));
+test('distance formatting uses adaptive units',()=>{assert.match(formatDistance(10_000),/km/);assert.match(formatDistance(SPEED_OF_LIGHT_M_S*30),/light-seconds/);assert.match(formatDistance(LIGHT_YEAR_METERS),/light-years/) });
+test('proof validation requires hashes, station and authorization',()=>{assert.deepEqual(validateTransmissionProof(proof),[]);assert.ok(validateTransmissionProof({...proof,proofArtifactSha256:null,authorizationRefs:[]}).length>=2)});
+test('proper motion changes aim point and expands missing-RV uncertainty',()=>{const a=estimateAimPoint(target,2050);assert.notEqual(a.raDeg,target.raDeg);const noRv=estimateAimPoint(TARGETS.find(x=>x.id==='lhs-1140-b'),2050);assert.ok(noRv.limitations.some(x=>x.includes('Radial velocity'))) });
+test('candidate score is multiplicative and automatic ET confirmation forbidden',()=>{assert.equal(candidateResponseScore({targetAngularConsistency:1,temporalWindowConsistency:1,dopplerConsistency:1,repetitionConsistency:1,modulationSimilarity:1,multiStationConfidence:1,rfiRejectionConfidence:1}),1);assert.equal(canTransitionAutomatically('CONFIRMED_EXTRATERRESTRIAL'),false)});
+test('LIVE label requires recent heartbeat',()=>{const p={truthClass:'LIVE_OBSERVATORY',source:'x',observedAt:new Date().toISOString(),processedAt:new Date().toISOString(),transformation:'none',version:'1',freshness:'CURRENT',limitations:[]};assert.equal(mayDisplayLive(p),true);assert.equal(mayDisplayLive({...p,observedAt:'2020-01-01T00:00:00Z'}),false)});

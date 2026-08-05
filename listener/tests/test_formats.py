@@ -26,4 +26,15 @@ class FormatTests(unittest.TestCase):
             actual, _ = load_sigmf(meta)
             self.assertTrue(np.array_equal(actual, expected))
 
+    def test_sigmf_name_with_multiple_dots(self):
+        with tempfile.TemporaryDirectory() as d:
+            meta = Path(d) / "rec.2026-08-05.sigmf-meta"
+            data = Path(d) / "rec.2026-08-05.sigmf-data"
+            expected = np.array([3+1j, 4+2j], dtype=np.complex64)
+            expected.tofile(data)
+            meta.write_text(json.dumps({"global": {"core:datatype": "cf32_le"}}))
+            actual, info = load_sigmf(meta)
+            self.assertTrue(np.array_equal(actual, expected))
+            self.assertEqual(Path(info["path"]).name, data.name)
+
 if __name__ == "__main__": unittest.main()

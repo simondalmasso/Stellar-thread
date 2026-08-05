@@ -13,7 +13,11 @@
     "test": "npm run test:core && npm run test:python",
     "audit:secrets": "node scripts/secret-scan.mjs",
     "licenses": "node scripts/license-inventory.mjs",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "build:manifest": "node scripts/build-manifest.mjs",
+    "test:worker": "node tests/worker-smoke.mjs",
+    "catalog:refresh": "node scripts/update-target-catalog.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.4",

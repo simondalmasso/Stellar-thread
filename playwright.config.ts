@@ -1,13 +1,2 @@
-import { defineConfig, devices } from '@playwright/test';
-
-export default defineConfig({
-  testDir: './tests/e2e',
-  timeout: 30_000,
-  retries: 1,
-  use: { baseURL: 'http://127.0.0.1:4173', trace: 'retain-on-failure' },
-  webServer: { command: 'npm run dev -- --host 127.0.0.1 --port 4173', url: 'http://127.0.0.1:4173', reuseExistingServer: true },
-  projects: [
-    { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } }
-  ]
-});
+import{defineConfig,devices}from'@playwright/test';
+export default defineConfig({testDir:'./tests/e2e',timeout:35_000,retries:1,use:{baseURL:'http://127.0.0.1:8787',trace:'retain-on-failure'},webServer:{command:'npx wrangler d1 migrations apply DB --local && npx wrangler dev --local --port 8787 --var OPERATOR_API_TOKEN:test-operator-token --var BUILD_SOURCE_SHA:local-test --var BUILD_TREE_SHA:local-tree --var BUILD_TIME_UTC:2026-08-05T00:00:00.000Z',url:'http://127.0.0.1:8787',reuseExistingServer:true,timeout:60_000},projects:[{name:'desktop-chromium',use:{...devices['Desktop Chrome']}},{name:'mobile-chromium',use:{...devices['Pixel 7']}}]});

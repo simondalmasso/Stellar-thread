@@ -1,29 +1,22 @@
 import type { Provenance } from './truth.js';
-
 export interface Target {
-  id: string;
-  displayName: string;
-  hostStar: string;
-  planetName: string;
-  raDeg: number;
-  decDeg: number;
-  distanceLightYears: number;
-  exoplanetStatus: 'CONFIRMED';
-  rationale: string[];
-  score: number;
-  provenance: Provenance;
+  id: string; displayName: string; hostStar: string; planetName: string;
+  catalogId: string; gaiaSourceId: string | null; hipId: string | null;
+  raDeg: number; decDeg: number; distanceLightYears: number; distanceUncertaintyLightYears: number;
+  apparentMagnitude: number; colorIndex: number | null; astrometryEpochYear: number;
+  pmRaMasYr: number; pmDecMasYr: number; radialVelocityKmS: number | null; positionUncertaintyMas: number;
+  exoplanetStatus: 'CONFIRMED'; rationale: string[]; score: number; provenance: Provenance;
 }
-
-const processedAt = '2026-08-05T15:00:00.000Z';
-const sourceUrl = 'https://exoplanetarchive.ipac.caltech.edu/';
-
-export const TARGETS: Target[] = [
-  { id: 'proxima-b', displayName: 'PROXIMA B', hostStar: 'Proxima Centauri', planetName: 'Proxima Centauri b', raDeg: 217.4292, decDeg: -62.6795, distanceLightYears: 4.2465, exoplanetStatus: 'CONFIRMED', rationale: ['Nearest confirmed exoplanet host', 'Short round-trip horizon', 'Extensive prior observation context'], score: 0.93, provenance: { truthClass: 'OFFICIAL_CATALOG', source: 'NASA Exoplanet Archive / SIMBAD cross-check', sourceUrl, processedAt, transformation: 'Curated target snapshot; distance converted from parsecs where applicable', version: 'targets-2026.08.05', freshness: 'CACHED', limitations: ['Static snapshot; refresh through catalog adapter before operational scheduling'] } },
-  { id: 'gj-273-b', displayName: 'GJ 273 B', hostStar: 'GJ 273', planetName: 'GJ 273 b', raDeg: 111.8521, decDeg: 5.2275, distanceLightYears: 12.2, exoplanetStatus: 'CONFIRMED', rationale: ['Nearby confirmed planet', 'Historical directed transmission context', 'Observable from both hemispheres'], score: 0.84, provenance: { truthClass: 'OFFICIAL_CATALOG', source: 'NASA Exoplanet Archive / Sónar Calling context', sourceUrl, processedAt, transformation: 'Curated target snapshot', version: 'targets-2026.08.05', freshness: 'CACHED', limitations: ['No claim of habitability'] } },
-  { id: 'ross-128-b', displayName: 'ROSS 128 B', hostStar: 'Ross 128', planetName: 'Ross 128 b', raDeg: 176.9376, decDeg: 0.7993, distanceLightYears: 11.03, exoplanetStatus: 'CONFIRMED', rationale: ['Nearby quiet M dwarf', 'Low declination supports broad facility visibility'], score: 0.82, provenance: { truthClass: 'OFFICIAL_CATALOG', source: 'NASA Exoplanet Archive', sourceUrl, processedAt, transformation: 'Curated target snapshot', version: 'targets-2026.08.05', freshness: 'CACHED', limitations: ['Stellar quietness is relative and model-dependent'] } },
-  { id: 'teegarden-b', displayName: 'TEEGARDEN B', hostStar: "Teegarden's Star", planetName: "Teegarden's Star b", raDeg: 43.2538, decDeg: 16.8813, distanceLightYears: 12.5, exoplanetStatus: 'CONFIRMED', rationale: ['Nearby confirmed planet', 'Favorable declination for many northern facilities'], score: 0.79, provenance: { truthClass: 'OFFICIAL_CATALOG', source: 'NASA Exoplanet Archive', sourceUrl, processedAt, transformation: 'Curated target snapshot', version: 'targets-2026.08.05', freshness: 'CACHED', limitations: ['Target properties remain subject to updated orbital solutions'] } },
-  { id: 'trappist-1-e', displayName: 'TRAPPIST-1 E', hostStar: 'TRAPPIST-1', planetName: 'TRAPPIST-1 e', raDeg: 346.6224, decDeg: -5.0413, distanceLightYears: 40.66, exoplanetStatus: 'CONFIRMED', rationale: ['Confirmed compact multi-planet system', 'High scientific interest', 'Large existing observation corpus'], score: 0.77, provenance: { truthClass: 'OFFICIAL_CATALOG', source: 'NASA Exoplanet Archive', sourceUrl, processedAt, transformation: 'Curated target snapshot', version: 'targets-2026.08.05', freshness: 'CACHED', limitations: ['Zone-habitable placement does not establish habitability'] } },
-  { id: 'lhs-1140-b', displayName: 'LHS 1140 B', hostStar: 'LHS 1140', planetName: 'LHS 1140 b', raDeg: 11.2472, decDeg: -15.2715, distanceLightYears: 48.9, exoplanetStatus: 'CONFIRMED', rationale: ['Confirmed rocky-planet candidate for atmospheric study', 'Southern visibility'], score: 0.72, provenance: { truthClass: 'OFFICIAL_CATALOG', source: 'NASA Exoplanet Archive', sourceUrl, processedAt, transformation: 'Curated target snapshot', version: 'targets-2026.08.05', freshness: 'CACHED', limitations: ['Physical characterization is under active scientific revision'] } }
+const processedAt='2026-08-05T16:00:00.000Z';
+const sourceUrl='https://exoplanetarchive.ipac.caltech.edu/docs/TAP/usingTAP.html';
+const p=(limitations:string[]):Provenance=>({truthClass:'OFFICIAL_CATALOG',source:'NASA Exoplanet Archive host snapshot with Gaia/SIMBAD identifiers',sourceUrl,observedAt:'2016-01-01T00:00:00.000Z',processedAt,transformation:'Host-star astrometry normalized; distances rounded to defensible precision',version:'nearby-stars-2026.08.05-v2',freshness:'CACHED',limitations});
+export const TARGETS:Target[]=[
+ {id:'proxima-b',displayName:'PROXIMA B',hostStar:'Proxima Centauri',planetName:'Proxima Centauri b',catalogId:'SIMBAD:Proxima Centauri',gaiaSourceId:'5853498713160606720',hipId:'HIP 70890',raDeg:217.4292,decDeg:-62.6795,distanceLightYears:4.2465,distanceUncertaintyLightYears:.001,apparentMagnitude:11.13,colorIndex:1.82,astrometryEpochYear:2016,pmRaMasYr:-3781.7,pmDecMasYr:769.3,radialVelocityKmS:-22.2,positionUncertaintyMas:.2,exoplanetStatus:'CONFIRMED',rationale:['Nearest confirmed exoplanet host','Shortest response horizon in catalog'],score:.93,provenance:p(['Planet orbital position is not predicted'])},
+ {id:'gj-273-b',displayName:'GJ 273 B',hostStar:'GJ 273',planetName:'GJ 273 b',catalogId:'SIMBAD:GJ 273',gaiaSourceId:'3139847906304421632',hipId:'HIP 36208',raDeg:111.8521,decDeg:5.2275,distanceLightYears:12.2,distanceUncertaintyLightYears:.03,apparentMagnitude:9.87,colorIndex:1.57,astrometryEpochYear:2016,pmRaMasYr:572.5,pmDecMasYr:-3694.4,radialVelocityKmS:18.2,positionUncertaintyMas:.3,exoplanetStatus:'CONFIRMED',rationale:['Nearby confirmed planet','Historical directed transmission context'],score:.84,provenance:p(['No claim of habitability'])},
+ {id:'ross-128-b',displayName:'ROSS 128 B',hostStar:'Ross 128',planetName:'Ross 128 b',catalogId:'SIMBAD:Ross 128',gaiaSourceId:'3796072592206250624',hipId:'HIP 57548',raDeg:176.9376,decDeg:.7993,distanceLightYears:11.03,distanceUncertaintyLightYears:.02,apparentMagnitude:11.15,colorIndex:1.66,astrometryEpochYear:2016,pmRaMasYr:607.1,pmDecMasYr:-1223.3,radialVelocityKmS:-31,positionUncertaintyMas:.3,exoplanetStatus:'CONFIRMED',rationale:['Nearby quiet M dwarf','Broad facility visibility'],score:.82,provenance:p(['Stellar quietness is model-dependent'])},
+ {id:'teegarden-b',displayName:'TEEGARDEN B',hostStar:"Teegarden's Star",planetName:"Teegarden's Star b",catalogId:"SIMBAD:Teegarden's Star",gaiaSourceId:'1472813770921564032',hipId:null,raDeg:43.2538,decDeg:16.8813,distanceLightYears:12.5,distanceUncertaintyLightYears:.05,apparentMagnitude:15.14,colorIndex:2.0,astrometryEpochYear:2016,pmRaMasYr:3429,pmDecMasYr:-3805,radialVelocityKmS:68.3,positionUncertaintyMas:.5,exoplanetStatus:'CONFIRMED',rationale:['Nearby confirmed system','High proper motion makes epoch propagation material'],score:.79,provenance:p(['Target parameters remain subject to revised orbital solutions'])},
+ {id:'trappist-1-e',displayName:'TRAPPIST-1 E',hostStar:'TRAPPIST-1',planetName:'TRAPPIST-1 e',catalogId:'SIMBAD:TRAPPIST-1',gaiaSourceId:'2635476908753563008',hipId:null,raDeg:346.6224,decDeg:-5.0413,distanceLightYears:40.66,distanceUncertaintyLightYears:.1,apparentMagnitude:18.8,colorIndex:2.5,astrometryEpochYear:2016,pmRaMasYr:930.9,pmDecMasYr:-479.4,radialVelocityKmS:-56.3,positionUncertaintyMas:.5,exoplanetStatus:'CONFIRMED',rationale:['Compact multi-planet system','Large observation corpus'],score:.77,provenance:p(['Habitable-zone placement does not establish habitability'])},
+ {id:'lhs-1140-b',displayName:'LHS 1140 B',hostStar:'LHS 1140',planetName:'LHS 1140 b',catalogId:'SIMBAD:LHS 1140',gaiaSourceId:'2371032916186181760',hipId:null,raDeg:11.2472,decDeg:-15.2715,distanceLightYears:48.9,distanceUncertaintyLightYears:.2,apparentMagnitude:14.18,colorIndex:1.9,astrometryEpochYear:2016,pmRaMasYr:317.2,pmDecMasYr:-596.6,radialVelocityKmS:null,positionUncertaintyMas:.7,exoplanetStatus:'CONFIRMED',rationale:['Confirmed rocky-planet target','Southern visibility'],score:.72,provenance:p(['Radial velocity missing in this snapshot; aim uncertainty expanded'])}
 ];
-
-export function getTarget(id: string): Target | undefined { return TARGETS.find(t => t.id === id); }
+export const CATALOG_META={id:'nearby-stars-2026.08.05-v2',retrievedAt:processedAt,epoch:2016,sourceUrl,license:'Catalog metadata attribution required',sha256:'generated-by-catalog-refresh-script'};
+export function getTarget(id:string){return TARGETS.find(t=>t.id===id)}

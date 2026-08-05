@@ -1,9 +1,7 @@
-# Product Truth
+# Product truth — Reality V2
 
-`TruthClass` is mandatory for target data, observations, streams, candidates and derived calculations. `LIVE_OBSERVATORY` is displayed as LIVE only when an observation heartbeat is no older than 30 seconds. Recorded files never become LIVE. Synthetic SSE events include both `truthClass=SYNTHETIC` and the visible label `SYNTHETIC TEST STREAM`.
+A draft, encoding or proposal is not a transmission. `IN_FLIGHT` can only be derived from a persisted `TRANSMITTED_PROOFED` record with valid UTC timestamp, payload SHA-256, proof artifact SHA-256, public station/operator identity and authorization references. The tracker recomputes distance from the persisted timestamp and the SI speed of light; animation ticks never alter scientific state.
 
-Forbidden automatic claims: `ET MESSAGE`, `ALIEN REPLIED`, `CONFIRMED_EXTRATERRESTRIAL`. The candidate API rejects an attempt to set the last state.
+The packet glyph is a visual metaphor. Physical wavefront geometry is spherical only for explicitly isotropic emission, a directional cone/cap when beam width is known, and a line of sight plus uncertainty when it is not. Narrative mode is always marked `NOT TO SCALE`.
 
-## Estado de verdad
-
-Este documento distingue datos oficiales, derivados, observaciones auténticas grabadas, pruebas sintéticas, revisión humana y datos no disponibles. Ningún pico, score o coincidencia se presenta como mensaje extraterrestre.
+`RECORDED_AUTHENTIC` means bytes or metadata trace to an authentic recording and manifest. Voyager is a known human technological control and is explicitly `NOT_EXTRATERRESTRIAL`. Zero imported coverage is `NO VERIFIED COVERAGE IMPORTED`, not cosmic silence.
