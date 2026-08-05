@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "truthClass": "RECORDED_AUTHENTIC",
+  "classification": "HUMAN_TECHNOLOGICAL_CONTROL",
+  "extraterrestrial": false,
+  "sourceFile": "Voyager1.single_coarse.fine_res.h5",
+  "parentSha256": "c9a9a54f4140e3754ffb2455fae4eeb2eb70c8207123116ee953e4fce15c36ac",
+  "sourceUrl": "http://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5",
+  "observedAtUtc": "2016-09-19T18:46:13.000Z",
+  "selection": {
+    "frequencyStartMHz": 8419.298100750893,
+    "frequencyEndMHz": 8419.29595777765,
+    "timeIntegrations": 16,
+    "channels": 768
+  },
+  "result": {
+    "peakFrequencyHz": 8419297027.744021,
+    "driftHzPerSecond": -0.37410601541473354,
+    "peakSnrProxyDb": 15.015602111816406
+  },
+  "limitations": [
+    "Known human spacecraft downlink",
+    "Derived frequency slice, not the full parent observation"
+  ],
+  "derivationManifestSha256": "c335cf6c0f3dfd44ddf2867bffce457e191d581d5235aea2c80320c83ec65362"
+}
