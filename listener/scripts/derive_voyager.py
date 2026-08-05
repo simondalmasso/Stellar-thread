@@ -1,6 +1,7 @@
 from __future__ import annotations
 import argparse, hashlib, json
 from pathlib import Path
+import hdf5plugin  # Registers the HDF5 filters used by the public Breakthrough Listen file.
 import h5py, numpy as np
 
 def sha(path:Path)->str:
