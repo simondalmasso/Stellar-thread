@@ -1,4 +1,10 @@
+import { mkdir } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
+
+async function capture(page: import('@playwright/test').Page, name: string) {
+  await mkdir('artifacts/ux-evidence', { recursive: true });
+  await page.screenshot({ path: `artifacts/ux-evidence/${name}.png`, fullPage: true });
+}
 
 test('desktop Reality V2 hierarchy and truth', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes('mobile'));
@@ -9,8 +15,10 @@ test('desktop Reality V2 hierarchy and truth', async ({ page }, testInfo) => {
   await expect(page.getByText('RF GATE CLOSED', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'UNIVERSE' }).click();
   await expect(page.getByText('Packet glyph: VISUAL METAPHOR — NOT A PHYSICAL PACKET')).toBeVisible();
+  await capture(page, 'desktop-universe-physical-truth');
   await page.getByRole('button', { name: 'LISTEN' }).click();
   await expect(page.getByText('NOT EXTRATERRESTRIAL', { exact: true })).toBeVisible();
+  await capture(page, 'desktop-listen-authentic-control');
 });
 
 test('encode stays on Earth and scientific layer exposes SHA-256', async ({ page }) => {
@@ -32,6 +40,7 @@ test('mobile uses bottom tabs and keeps 44px controls', async ({ page }, testInf
   await expect(tabs.getByRole('button')).toHaveCount(5);
   const box = await tabs.getByRole('button').first().boundingBox();
   expect(box?.height).toBeGreaterThanOrEqual(44);
+  await capture(page, 'mobile-thread-primary-flow');
 });
 
 test('build API exposes exact provenance contract', async ({ request }) => {
