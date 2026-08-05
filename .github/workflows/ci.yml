@@ -6,10 +6,33 @@ on:
 permissions:
   contents: read
 jobs:
+  source-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Record exact checkout
+        run: |
+          echo "HEAD_SHA=$(git rev-parse HEAD)" | tee source-head.txt
+          echo "TREE_SHA=$(git rev-parse HEAD^{tree})" | tee source-tree.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stellar-thread-source-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          include-hidden-files: true
+          path: |
+            .
+            !.git/**
+            !node_modules/**
+            !dist/**
+            !test-results/**
+            !playwright-report/**
   web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -23,9 +46,10 @@ jobs:
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         with:
-          name: stellar-thread-web-${{ github.sha }}
+          name: stellar-thread-web-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           path: |
             dist
+            package-lock.json
             artifacts/license-inventory.json
             playwright-report
           if-no-files-found: ignore
@@ -33,6 +57,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -43,5 +69,5 @@ jobs:
       - run: mkdir -p artifacts && cosmic-listener observe --synthetic --duration 4 --output artifacts/synthetic-candidate.json
       - uses: actions/upload-artifact@v4
         with:
-          name: stellar-thread-dsp-${{ github.sha }}
+          name: stellar-thread-dsp-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           path: artifacts/synthetic-candidate.json
