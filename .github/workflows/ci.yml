@@ -5,20 +5,24 @@ on:
   pull_request:
 permissions:
   contents: read
+env:
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 jobs:
-  source-snapshot:
+  source-provenance:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        with: { ref: '${{ env.SOURCE_SHA }}' }
       - name: Record exact checkout
         run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
           echo "HEAD_SHA=$(git rev-parse HEAD)" | tee source-head.txt
           echo "TREE_SHA=$(git rev-parse HEAD^{tree})" | tee source-tree.txt
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:manifest
       - uses: actions/upload-artifact@v4
         with:
-          name: stellar-thread-source-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          name: source-provenance-${{ env.SOURCE_SHA }}
           include-hidden-files: true
           path: |
             .
@@ -27,47 +31,114 @@ jobs:
             !dist/**
             !test-results/**
             !playwright-report/**
-  web:
+  web-worker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        with: { ref: '${{ env.SOURCE_SHA }}' }
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install --no-audit --no-fund
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --no-audit --no-fund
       - run: npm run test:core
       - run: npm run typecheck
       - run: npm run build
+      - run: npm run build:manifest
+        env: { SOURCE_SHA: '${{ env.SOURCE_SHA }}' }
       - run: npm run audit:secrets
       - run: npm run licenses
+      - name: Worker local integration
+        run: |
+          npx wrangler d1 migrations apply DB --local
+          npx wrangler dev --local --port 8787 --var OPERATOR_API_TOKEN:test-operator-token --var BUILD_SOURCE_SHA:$SOURCE_SHA --var BUILD_TREE_SHA:$(git rev-parse HEAD^{tree}) --var BUILD_TIME_UTC:2026-08-05T00:00:00.000Z > worker.log 2>&1 &
+          WORKER_PID=$!
+          trap 'kill $WORKER_PID || true' EXIT
+          for i in {1..45}; do curl -fsS http://127.0.0.1:8787/api/v1/health && break || sleep 1; done
+          npm run test:worker
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Prepare UX evidence
+        if: always()
+        run: |
+          mkdir -p artifacts/ux-evidence artifacts/test-reports
+          cp -R playwright-report/. artifacts/ux-evidence/ 2>/dev/null || true
+          cp worker.log artifacts/test-reports/worker.log 2>/dev/null || true
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: stellar-thread-web-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          name: stellar-thread-production-${{ env.SOURCE_SHA }}
           path: |
             dist
             package-lock.json
+            artifacts/build-manifest.json
             artifacts/license-inventory.json
-            playwright-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ux-evidence-${{ env.SOURCE_SHA }}
+          path: artifacts/ux-evidence
           if-no-files-found: ignore
-  dsp:
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ env.SOURCE_SHA }}
+          path: artifacts/test-reports
+          if-no-files-found: ignore
+  dsp-synthetic:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        with: { ref: '${{ env.SOURCE_SHA }}' }
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
+        with: { python-version: '3.13', cache: pip }
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ./listener
+      - run: python -m pip install -c listener/constraints.txt -e ./listener
       - run: python -m unittest discover -s listener/tests -p 'test_*.py' -v
       - run: cosmic-listener doctor
-      - run: mkdir -p artifacts && cosmic-listener observe --synthetic --duration 4 --output artifacts/synthetic-candidate.json
+      - run: mkdir -p artifacts/synthetic-dsp && cosmic-listener observe --synthetic --duration 4 --output artifacts/synthetic-dsp/candidate.json
       - uses: actions/upload-artifact@v4
         with:
-          name: stellar-thread-dsp-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          path: artifacts/synthetic-candidate.json
+          name: synthetic-dsp-${{ env.SOURCE_SHA }}
+          path: artifacts/synthetic-dsp
+  dsp-authentic-voyager:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: '${{ env.SOURCE_SHA }}' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13', cache: pip }
+      - run: python -m pip install -c listener/constraints.txt numpy h5py
+      - name: Download public Berkeley Voyager control
+        run: |
+          mkdir -p authentic-source
+          curl --fail --location --retry 3 --connect-timeout 30 \
+            https://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5 \
+            -o authentic-source/Voyager1.single_coarse.fine_res.h5 \
+          || curl --fail --location --retry 3 --connect-timeout 30 \
+            http://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5 \
+            -o authentic-source/Voyager1.single_coarse.fine_res.h5
+      - run: python listener/scripts/derive_voyager.py authentic-source/Voyager1.single_coarse.fine_res.h5 --out artifacts/authentic-voyager
+      - name: Verify reproducible derived artifact
+        run: |
+          python listener/scripts/derive_voyager.py authentic-source/Voyager1.single_coarse.fine_res.h5 --out artifacts/authentic-voyager-replay
+          diff -u artifacts/authentic-voyager/manifest.json artifacts/authentic-voyager-replay/manifest.json
+          cmp artifacts/authentic-voyager/voyager-control-waterfall.npy artifacts/authentic-voyager-replay/voyager-control-waterfall.npy
+      - uses: actions/upload-artifact@v4
+        with:
+          name: authentic-dsp-${{ env.SOURCE_SHA }}
+          path: artifacts/authentic-voyager
+  merge-verification:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:core && npm run typecheck && npm run build
+      - run: |
+          mkdir -p artifacts
+          echo '{"mergeSha":"'"$(git rev-parse HEAD)"'","headSha":"'"$SOURCE_SHA"'"}' > artifacts/merge-verification.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: merge-verification-${{ env.SOURCE_SHA }}
+          path: artifacts/merge-verification.json
