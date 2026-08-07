@@ -4,6 +4,7 @@ import type { Target } from './targets.js';
 export const SPEED_OF_LIGHT_M_S = 299_792_458;
 export const LIGHT_YEAR_METERS = 9_460_730_472_580_800;
 export const TRACKER_FORMULA_VERSION = 'propagation-si-v2';
+export const ALLOWED_CLOCK_SKEW_MS = 1_000;
 
 export type MessageLifecycle =
   | 'DRAFT' | 'ENCODED' | 'PROPOSAL_READY' | 'APPROVAL_PENDING' | 'SCHEDULED'
@@ -11,129 +12,19 @@ export type MessageLifecycle =
   | 'ARRIVED_ESTIMATE' | 'REPLY_WINDOW_OPEN' | 'CANCELLED' | 'FAILED';
 
 export interface TransmissionProof {
-  transmissionId: string;
-  messageId: string;
-  targetId: string;
+  transmissionId: string; messageId: string; targetId: string;
   status: 'PROPOSED' | 'SCHEDULED' | 'TRANSMITTED_PROOFED' | 'FAILED';
-  transmittedAtUtc: string | null;
-  transmissionEndUtc: string | null;
-  stationId: string | null;
-  facilityName: string | null;
-  operatorId: string | null;
-  frequencyHz: number | null;
-  bandwidthHz: number | null;
-  modulationProfile: string | null;
-  bitrate: number | null;
-  beamType: 'ISOTROPIC' | 'DIRECTIONAL' | 'UNKNOWN';
-  beamWidthDeg: number | null;
-  payloadSha256: string;
-  waveformSha256: string | null;
-  proofArtifactSha256: string | null;
-  authorizationRefs: string[];
-  truthClass: TruthClass;
-  source: string;
-  limitations: string[];
+  transmittedAtUtc: string | null; transmissionEndUtc: string | null;
+  stationId: string | null; facilityName: string | null; operatorId: string | null;
+  frequencyHz: number | null; bandwidthHz: number | null; modulationProfile: string | null; bitrate: number | null;
+  beamType: 'ISOTROPIC' | 'DIRECTIONAL' | 'UNKNOWN'; beamWidthDeg: number | null;
+  payloadSha256: string; waveformSha256: string | null; proofArtifactSha256: string | null;
+  authorizationRefs: string[]; truthClass: TruthClass; source: string; limitations: string[];
 }
-
-export interface MessageRecord {
-  id: string;
-  threadId: string;
-  targetId: string;
-  text: string;
-  state: MessageLifecycle;
-  cmpProfile: string;
-  cmpVersion: 'CMP-1';
-  payloadSha256: string | null;
-  encodedBits: number | null;
-  createdAtUtc: string;
-  updatedAtUtc: string;
-  proposalId: string | null;
-  transmissionId: string | null;
-  truthClass: TruthClass;
-}
-
-export interface PropagationResult {
-  lifecycle: MessageLifecycle;
-  eligible: boolean;
-  reason: string;
-  elapsedSeconds: number;
-  targetRangeMeters: number;
-  distanceTravelledMeters: number;
-  remainingDistanceMeters: number;
-  progress: number;
-  arrivalEstimateUtc: string | null;
-  earliestReplyUtc: string | null;
-  replyWindowOpen: boolean;
-  uncertaintyMeters: number;
-  method: typeof TRACKER_FORMULA_VERSION;
-  epochUtc: string | null;
-}
-
-const SHA256 = /^[a-f0-9]{64}$/i;
-export function validateTransmissionProof(proof: TransmissionProof): string[] {
-  const errors: string[] = [];
-  if (!proof.transmissionId || !proof.messageId || !proof.targetId) errors.push('Stable identifiers are required');
-  if (!SHA256.test(proof.payloadSha256)) errors.push('payloadSha256 must contain 64 hexadecimal characters');
-  if (proof.status === 'TRANSMITTED_PROOFED') {
-    if (!proof.transmittedAtUtc || !Number.isFinite(Date.parse(proof.transmittedAtUtc))) errors.push('A valid transmittedAtUtc is required');
-    if (!proof.stationId || !proof.facilityName || !proof.operatorId) errors.push('Station, facility and public operator identity are required');
-    if (!proof.proofArtifactSha256 || !SHA256.test(proof.proofArtifactSha256)) errors.push('A valid proof artifact SHA-256 is required');
-    if (proof.authorizationRefs.length === 0) errors.push('At least one authorization reference is required');
-  }
-  if (proof.beamType === 'DIRECTIONAL' && proof.beamWidthDeg !== null && (proof.beamWidthDeg <= 0 || proof.beamWidthDeg > 180)) errors.push('Invalid beam width');
-  return errors;
-}
-
-export function computePropagation(proof: TransmissionProof | null, target: Pick<Target, 'distanceLightYears' | 'distanceUncertaintyLightYears'>, nowMs = Date.now()): PropagationResult {
-  const range = target.distanceLightYears * LIGHT_YEAR_METERS;
-  const uncertainty = target.distanceUncertaintyLightYears * LIGHT_YEAR_METERS;
-  const base = { elapsedSeconds: 0, targetRangeMeters: range, distanceTravelledMeters: 0, remainingDistanceMeters: range, progress: 0, arrivalEstimateUtc: null, earliestReplyUtc: null, replyWindowOpen: false, uncertaintyMeters: uncertainty, method: TRACKER_FORMULA_VERSION, epochUtc: proof?.transmittedAtUtc ?? null } as const;
-  if (!proof) return { ...base, lifecycle: 'DRAFT', eligible: false, reason: 'No transmission proof exists' };
-  const errors = validateTransmissionProof(proof);
-  if (proof.status !== 'TRANSMITTED_PROOFED' || errors.length > 0 || !proof.transmittedAtUtc) {
-    const lifecycle: MessageLifecycle = proof.status === 'SCHEDULED' ? 'SCHEDULED' : proof.status === 'FAILED' ? 'FAILED' : 'PROPOSAL_READY';
-    return { ...base, lifecycle, eligible: false, reason: errors[0] ?? 'The package was not transmitted' };
-  }
-  const transmittedMs = Date.parse(proof.transmittedAtUtc);
-  const elapsedSeconds = Math.max(0, (nowMs - transmittedMs) / 1000);
-  const travelled = Math.min(range, SPEED_OF_LIGHT_M_S * elapsedSeconds);
-  const remaining = Math.max(0, range - travelled);
-  const progress = range > 0 ? Math.min(1, travelled / range) : 0;
-  const arrivalMs = transmittedMs + range / SPEED_OF_LIGHT_M_S * 1000;
-  const replyMs = transmittedMs + 2 * range / SPEED_OF_LIGHT_M_S * 1000;
-  const arrived = nowMs >= arrivalMs;
-  const replyOpen = nowMs >= replyMs;
-  return {
-    lifecycle: replyOpen ? 'REPLY_WINDOW_OPEN' : arrived ? 'ARRIVED_ESTIMATE' : 'IN_FLIGHT',
-    eligible: true,
-    reason: 'Derived exclusively from a persisted transmission proof and SI light speed',
-    elapsedSeconds, targetRangeMeters: range, distanceTravelledMeters: travelled,
-    remainingDistanceMeters: remaining, progress,
-    arrivalEstimateUtc: new Date(arrivalMs).toISOString(), earliestReplyUtc: new Date(replyMs).toISOString(),
-    replyWindowOpen: replyOpen, uncertaintyMeters: uncertainty, method: TRACKER_FORMULA_VERSION,
-    epochUtc: proof.transmittedAtUtc
-  };
-}
-
-export function formatDistance(meters: number): string {
-  const a = Math.abs(meters);
-  const km = meters / 1000;
-  const lightSeconds = meters / SPEED_OF_LIGHT_M_S;
-  const au = meters / 149_597_870_700;
-  if (a < 1e9) return `${km.toLocaleString(undefined, { maximumFractionDigits: 0 })} km`;
-  if (Math.abs(lightSeconds) < 120) return `${lightSeconds.toFixed(1)} light-seconds`;
-  if (Math.abs(lightSeconds) < 7_200) return `${(lightSeconds / 60).toFixed(1)} light-minutes`;
-  if (Math.abs(au) < 2) return `${au.toFixed(3)} AU`;
-  if (Math.abs(lightSeconds) < 86_400 * 300) return `${(lightSeconds / 86_400).toFixed(2)} light-days`;
-  return `${(meters / LIGHT_YEAR_METERS).toFixed(6)} light-years`;
-}
-
-export function messageStateCopy(state: MessageLifecycle, transmittedAtUtc?: string | null, travelled?: string): string {
-  if (state === 'DRAFT' || state === 'ENCODED') return 'Tu mensaje todavía está en la Tierra.';
-  if (state === 'PROPOSAL_READY' || state === 'APPROVAL_PENDING') return 'El paquete está preparado, pero no fue transmitido.';
-  if (state === 'SCHEDULED') return 'Hay una ventana programada. La emisión todavía no comenzó.';
-  if (state === 'TRANSMISSION_IN_PROGRESS') return 'Una estación autorizada informa emisión en curso.';
-  if (state === 'TRANSMITTED_PROOFED' || state === 'IN_FLIGHT') return `Transmitido el ${transmittedAtUtc ?? 'UTC no disponible'}. El frente de onda estaría aproximadamente a ${travelled ?? 'distancia no calculada'} de la Tierra.`;
-  if (state === 'ARRIVED_ESTIMATE' || state === 'REPLY_WINDOW_OPEN') return 'El frente de onda habría alcanzado el sistema objetivo aproximadamente en la fecha calculada, dentro de la incertidumbre indicada.';
-  return state === 'FAILED' ? 'La transmisión falló y no existe propagación válida.' : 'Estado científico pendiente de revisión.';
-}
+export interface MessageRecord { id:string;threadId:string;targetId:string;text:string;state:MessageLifecycle;cmpProfile:string;cmpVersion:'CMP-1';payloadSha256:string|null;encodedBits:number|null;createdAtUtc:string;updatedAtUtc:string;proposalId:string|null;transmissionId:string|null;truthClass:TruthClass }
+export interface PropagationResult { lifecycle:MessageLifecycle;eligible:boolean;reason:string;elapsedSeconds:number;targetRangeMeters:number;distanceTravelledMeters:number;remainingDistanceMeters:number;progress:number;arrivalEstimateUtc:string|null;earliestReplyUtc:string|null;replyWindowOpen:boolean;uncertaintyMeters:number;method:typeof TRACKER_FORMULA_VERSION;epochUtc:string|null }
+const SHA256=/^[a-f0-9]{64}$/i;
+export function validateTransmissionProof(proof:TransmissionProof):string[]{const errors:string[]=[];if(!proof.transmissionId||!proof.messageId||!proof.targetId)errors.push('Stable identifiers are required');if(!SHA256.test(proof.payloadSha256))errors.push('payloadSha256 must contain 64 hexadecimal characters');if(proof.status==='TRANSMITTED_PROOFED'){if(!proof.transmittedAtUtc||!Number.isFinite(Date.parse(proof.transmittedAtUtc)))errors.push('A valid transmittedAtUtc is required');if(!proof.stationId||!proof.facilityName||!proof.operatorId)errors.push('Station, facility and public operator identity are required');if(!proof.proofArtifactSha256||!SHA256.test(proof.proofArtifactSha256))errors.push('A valid proof artifact SHA-256 is required');if(proof.authorizationRefs.length===0)errors.push('At least one authorization reference is required')}if(proof.transmittedAtUtc&&proof.transmissionEndUtc&&Date.parse(proof.transmissionEndUtc)<Date.parse(proof.transmittedAtUtc))errors.push('transmissionEndUtc must not precede transmittedAtUtc');if(proof.beamType==='DIRECTIONAL'&&proof.beamWidthDeg!==null&&(proof.beamWidthDeg<=0||proof.beamWidthDeg>180))errors.push('Invalid beam width');return errors}
+export function computePropagation(proof:TransmissionProof|null,target:Pick<Target,'distanceLightYears'|'distanceUncertaintyLightYears'>,nowMs=Date.now()):PropagationResult{const range=target.distanceLightYears*LIGHT_YEAR_METERS;const uncertainty=target.distanceUncertaintyLightYears*LIGHT_YEAR_METERS;const base={elapsedSeconds:0,targetRangeMeters:range,distanceTravelledMeters:0,remainingDistanceMeters:range,progress:0,arrivalEstimateUtc:null,earliestReplyUtc:null,replyWindowOpen:false,uncertaintyMeters:uncertainty,method:TRACKER_FORMULA_VERSION,epochUtc:proof?.transmittedAtUtc??null}as const;if(!proof)return{...base,lifecycle:'DRAFT',eligible:false,reason:'No transmission proof exists'};const errors=validateTransmissionProof(proof);if(proof.status!=='TRANSMITTED_PROOFED'||errors.length>0||!proof.transmittedAtUtc){const lifecycle:MessageLifecycle=proof.status==='SCHEDULED'?'SCHEDULED':proof.status==='FAILED'?'FAILED':'PROPOSAL_READY';return{...base,lifecycle,eligible:false,reason:errors[0]??'The package was not transmitted'}}const transmittedMs=Date.parse(proof.transmittedAtUtc);if(transmittedMs>nowMs+ALLOWED_CLOCK_SKEW_MS)return{...base,lifecycle:'PROPOSAL_READY',eligible:false,reason:'Transmission proof timestamp is in the future'};const elapsedSeconds=Math.max(0,(nowMs-transmittedMs)/1000);const travelled=Math.min(range,SPEED_OF_LIGHT_M_S*elapsedSeconds);const remaining=Math.max(0,range-travelled);const progress=range>0?Math.min(1,travelled/range):0;const arrivalMs=transmittedMs+range/SPEED_OF_LIGHT_M_S*1000;const replyMs=transmittedMs+2*range/SPEED_OF_LIGHT_M_S*1000;const arrived=nowMs>=arrivalMs;const replyOpen=nowMs>=replyMs;return{lifecycle:replyOpen?'REPLY_WINDOW_OPEN':arrived?'ARRIVED_ESTIMATE':'IN_FLIGHT',eligible:true,reason:'Derived exclusively from a persisted transmission proof and SI light speed',elapsedSeconds,targetRangeMeters:range,distanceTravelledMeters:travelled,remainingDistanceMeters:remaining,progress,arrivalEstimateUtc:new Date(arrivalMs).toISOString(),earliestReplyUtc:new Date(replyMs).toISOString(),replyWindowOpen:replyOpen,uncertaintyMeters:uncertainty,method:TRACKER_FORMULA_VERSION,epochUtc:proof.transmittedAtUtc}}
+export function formatDistance(meters:number):string{const a=Math.abs(meters),km=meters/1000,lightSeconds=meters/SPEED_OF_LIGHT_M_S,au=meters/149_597_870_700;if(a<1e9)return`${km.toLocaleString(undefined,{maximumFractionDigits:0})} km`;if(Math.abs(lightSeconds)<120)return`${lightSeconds.toFixed(1)} light-seconds`;if(Math.abs(lightSeconds)<7200)return`${(lightSeconds/60).toFixed(1)} light-minutes`;if(Math.abs(au)<2)return`${au.toFixed(3)} AU`;if(Math.abs(lightSeconds)<86400*300)return`${(lightSeconds/86400).toFixed(2)} light-days`;return`${(meters/LIGHT_YEAR_METERS).toFixed(6)} light-years`}
+export function messageStateCopy(state:MessageLifecycle,transmittedAtUtc?:string|null,travelled?:string):string{if(state==='DRAFT'||state==='ENCODED')return'Tu mensaje todavía está en la Tierra.';if(state==='PROPOSAL_READY'||state==='APPROVAL_PENDING')return'El paquete está preparado, pero no fue transmitido.';if(state==='SCHEDULED')return'Hay una ventana programada. La emisión todavía no comenzó.';if(state==='TRANSMISSION_IN_PROGRESS')return'Una estación autorizada informa emisión en curso.';if(state==='TRANSMITTED_PROOFED'||state==='IN_FLIGHT')return`Transmitido el ${transmittedAtUtc??'UTC no disponible'}. El frente de onda estaría aproximadamente a ${travelled??'distancia no calculada'} de la Tierra.`;if(state==='ARRIVED_ESTIMATE'||state==='REPLY_WINDOW_OPEN')return'El frente de onda habría alcanzado el sistema objetivo aproximadamente en la fecha calculada, dentro de la incertidumbre indicada.';return state==='FAILED'?'La transmisión falló y no existe propagación válida.':'Estado científico pendiente de revisión.'}

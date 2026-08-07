@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stellar-thread",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-08-01",
+  "assets": {"directory":"./dist","binding":"ASSETS","not_found_handling":"single-page-application"},
+  "observability": {"enabled":true},
+  "version_metadata": {"binding":"CF_VERSION_METADATA"},
+  "vars": {"APP_ENV":"test","ALLOW_PHYSICAL_TRANSMISSION":"false","BUILD_SOURCE_SHA":"local","BUILD_TREE_SHA":"local","BUILD_TIME_UTC":"1970-01-01T00:00:00.000Z"},
+  "d1_databases": [{"binding":"DB","database_name":"stellar-thread-reality-v2-local","database_id":"00000000-0000-0000-0000-000000000001","migrations_dir":"migrations"}]
+}

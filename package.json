@@ -8,16 +8,18 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test:core": "rm -rf .build-core && tsc -p tsconfig.core.json && node --test tests/core.test.mjs",
-    "test:python": "python -m unittest discover -s listener -p 'test_*.py' -v",
+    "test:python": "node scripts/assert-python-tests.mjs",
     "test:e2e": "playwright test",
     "test": "npm run test:core && npm run test:python",
     "audit:secrets": "node scripts/secret-scan.mjs",
     "licenses": "node scripts/license-inventory.mjs",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && npm run deploy:preflight && node scripts/render-wrangler-production.mjs && wrangler deploy --config .wrangler.production.json",
     "build:manifest": "node scripts/build-manifest.mjs",
     "test:worker": "node tests/worker-smoke.mjs",
     "catalog:refresh": "node scripts/update-target-catalog.mjs",
-    "db:migrate:local": "wrangler d1 migrations apply DB --local"
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.local.jsonc",
+    "catalog:verify": "node scripts/update-target-catalog.mjs --verify",
+    "deploy:preflight": "node scripts/deploy-preflight.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.4",

@@ -5,6 +5,6 @@
   "compatibility_date": "2026-08-01",
   "assets": {"directory":"./dist","binding":"ASSETS","not_found_handling":"single-page-application"},
   "observability": {"enabled":true},
-  "vars": {"APP_ENV":"production","ALLOW_PHYSICAL_TRANSMISSION":"false","BUILD_SOURCE_SHA":"UNAVAILABLE","BUILD_TREE_SHA":"UNAVAILABLE","BUILD_TIME_UTC":"UNAVAILABLE"},
-  "d1_databases": [{"binding":"DB","database_name":"stellar-thread-reality-v2","database_id":"00000000-0000-0000-0000-000000000000","migrations_dir":"migrations"}]
+  "version_metadata": {"binding":"CF_VERSION_METADATA"},
+  "vars": {"APP_ENV":"production","ALLOW_PHYSICAL_TRANSMISSION":"false"}
 }
