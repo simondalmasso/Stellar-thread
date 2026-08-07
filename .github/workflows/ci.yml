@@ -100,7 +100,11 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.13', cache: pip }
       - run: python -m pip install -c listener/constraints.txt numpy h5py hdf5plugin
-      - run: mkdir -p source artifacts/authentic-voyager-derived && curl --fail --location --retry 3 https://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5 -o source/Voyager1.single_coarse.fine_res.h5
+      - name: Download pinned public Voyager control
+        run: |
+          mkdir -p source artifacts/authentic-voyager-derived
+          curl --fail --location --retry 3 --connect-timeout 30 https://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5 -o source/Voyager1.single_coarse.fine_res.h5 \
+          || curl --fail --location --retry 3 --connect-timeout 30 http://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5 -o source/Voyager1.single_coarse.fine_res.h5
       - run: echo 'c9a9a54f4140e3754ffb2455fae4eeb2eb70c8207123116ee953e4fce15c36ac  source/Voyager1.single_coarse.fine_res.h5' | sha256sum --check -
       - run: python listener/scripts/derive_voyager.py source/Voyager1.single_coarse.fine_res.h5 --out artifacts/authentic-voyager-derived
       - run: diff -u data/authentic/voyager1-control-manifest.json artifacts/authentic-voyager-derived/manifest.json && diff -u data/authentic/voyager-control-preview.json artifacts/authentic-voyager-derived/voyager-control-preview.json && cmp data/authentic/voyager-control-preview.json src/data/voyager-control-preview.generated.json
