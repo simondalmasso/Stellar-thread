@@ -52,6 +52,8 @@ jobs:
       - name: Validate zero-cost static deployment config
         run: node scripts/render-wrangler-free.mjs
         env: { BUILD_SOURCE_SHA: '${{ env.SOURCE_SHA }}' }
+      - name: Test Worker-first API routing
+        run: node --test tests/free-deploy-routing.test.mjs
       - name: D1 Worker happy path and restart
         run: |
           mkdir -p artifacts/worker-integration

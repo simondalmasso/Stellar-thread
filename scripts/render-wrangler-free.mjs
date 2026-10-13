@@ -9,7 +9,8 @@ const cfg={
   name:'stellar-thread',
   main:'worker/index.ts',
   compatibility_date:'2026-08-01',
-  assets:{directory:'./dist',binding:'ASSETS',not_found_handling:'single-page-application'},
+  preview_urls:false,
+  assets:{directory:'./dist',binding:'ASSETS',not_found_handling:'single-page-application',run_worker_first:['/api/*']},
   observability:{enabled:true},
   version_metadata:{binding:'CF_VERSION_METADATA'},
   vars:{
@@ -22,6 +23,6 @@ const cfg={
     BUILD_WORKFLOW_RUN_ID:workflowRunId
   }
 };
-if(cfg.vars.ALLOW_PHYSICAL_TRANSMISSION!=='false'||cfg.vars.DEPLOY_MODE!=='STATIC_READ_ONLY'||'d1_databases' in cfg)throw new Error('Free deployment safety invariant failed');
+if(cfg.vars.ALLOW_PHYSICAL_TRANSMISSION!=='false'||cfg.vars.DEPLOY_MODE!=='STATIC_READ_ONLY'||!cfg.assets.run_worker_first.includes('/api/*')||cfg.preview_urls!==false||'d1_databases' in cfg)throw new Error('Free deployment safety invariant failed');
 await fs.writeFile('.wrangler.free.json',JSON.stringify(cfg,null,2)+'\n');
 console.log(JSON.stringify({status:'PASS',mode:cfg.vars.DEPLOY_MODE,d1Binding:false,operatorSecretRequired:false,physicalTransmission:false,sourceSha,treeSha}));

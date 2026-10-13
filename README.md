@@ -22,14 +22,14 @@ Stellar Thread is a proposed research-software project for encoding hypothetical
 - The nearby-target catalog is a versioned snapshot, not a live catalog query. `npm run catalog:verify` checks its normalized and generated copies.
 - CMP-1 uses CRC-32, SHA-256 and FEC repetition-3; other repetition values are rejected.
 - The public Voyager 1 control is a recorded 2016 radio-astronomy observation of a known human-made spacecraft. It is classified `RECORDED_AUTHENTIC`, `HUMAN_TECHNOLOGICAL_CONTROL`, and `extraterrestrial=false`. It is not engineering telemetry and does not provide a command channel.
-- The Moon Relay mean-distance mode is educational. Its experimental ephemeris path is not approved for operational EME planning; upstream-policy and caching safeguards must be resolved before any production use.
+- The Moon Relay mean-distance mode is educational. The experimental ephemeris path validates inputs and is rate-limited in D1-backed mode; it is disabled in the free `STATIC_READ_ONLY` deployment pending upstream-policy and caching review. It is not approved for operational EME planning.
 - Synthetic demonstrations remain labeled synthetic. No coverage is claimed without verified observation records.
 
 ## Operational truth
 
 ```text
-PR_IMPLEMENTATION=OPEN_FOR_REVIEW
-PRODUCTION_DEPLOYED=NO
+PR_IMPLEMENTATION=MERGED_TO_MAIN
+PRODUCTION_DEPLOYMENT_MODE=STATIC_READ_ONLY
 PRODUCTION_D1_BINDING=ABSENT
 LIVE_OBSERVATORY_CONNECTED=NO
 VOYAGER_ENGINEERING_TELEMETRY=NOT_CONNECTED
@@ -38,7 +38,7 @@ PHYSICAL_RF_TRANSMISSION=NOT_PERFORMED
 OPTICAL_EMISSION=NOT_PERFORMED
 ```
 
-The local D1 migration path is `npm run db:migrate:local`. Do not deploy the current production Wrangler configuration as a persistent service until a real D1 resource and binding have been explicitly provisioned and reviewed. No remote migration or production deployment is part of this PR.
+The local D1 migration path is `npm run db:migrate:local`. The free deployment workflow publishes the dashboard in `STATIC_READ_ONLY` mode after main CI succeeds; it does not create, delete, or bind a production D1 database. Verify `/api/v1/build` and `/api/v1/health` against the deployed source SHA before treating a release as live. The separate D1-backed workflow remains manual and gated.
 
 ## Reproducible development
 
