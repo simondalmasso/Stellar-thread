@@ -14,8 +14,11 @@ jobs:
       - uses: actions/checkout@v4
         with: { ref: '${{ env.SOURCE_SHA }}', fetch-depth: 0 }
       - run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - name: Check whitespace errors in proposed diff
+        run: git diff --check origin/main...HEAD
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
+      - run: node scripts/check-doc-links.mjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build:manifest
       - run: mkdir -p artifacts/source-provenance && git rev-parse HEAD > artifacts/source-provenance/head.txt && git rev-parse HEAD^{tree} > artifacts/source-provenance/tree.txt && cp artifacts/build-manifest.json artifacts/source-provenance/
