@@ -2,7 +2,7 @@
 
 ## Free public deployment
 
-`.github/workflows/deploy-free.yml` publishes the application to the existing Cloudflare Worker after CI succeeds on `main`. It uses the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; it does not need an operator token or a D1 database ID.
+`.github/workflows/deploy-free.yml` publishes the application to the existing Cloudflare Worker after CI succeeds on `main`. It uses the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; it does not need an operator token or a D1 database ID. The Worker is configured to run first for `/api/*`, so SPA fallback cannot mask API JSON responses. Preview URLs are disabled.
 
 This connected Cloudflare account already has 10 D1 databases. The Workers Free limit is 10 databases per account, so this workflow does not create a database, delete another project's database, or upgrade the account. It deploys in `STATIC_READ_ONLY` mode:
 - The catalog, scientific visualizations and recorded Voyager control preview are available.
