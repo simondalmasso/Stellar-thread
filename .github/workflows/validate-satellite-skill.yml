@@ -1,0 +1,28 @@
+name: Validate Stellar Satellite Communications Skill
+on:
+  push:
+    paths:
+      - 'skills/stellar-satellite-communications/**'
+      - 'scripts/validate-satellite-skill.mjs'
+      - 'tests/satellite-skill.test.mjs'
+      - '.github/workflows/validate-satellite-skill.yml'
+  pull_request:
+    paths:
+      - 'skills/stellar-satellite-communications/**'
+      - 'scripts/validate-satellite-skill.mjs'
+      - 'tests/satellite-skill.test.mjs'
+      - '.github/workflows/validate-satellite-skill.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate metadata, local references and safety gates
+        run: node scripts/validate-satellite-skill.mjs
+      - name: Run skill contract tests
+        run: node --test tests/satellite-skill.test.mjs
