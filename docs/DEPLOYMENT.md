@@ -1,26 +1,30 @@
 # Deployment
 
-## Current verified state
+## Free public deployment
 
-No production deployment has been executed. `wrangler.jsonc` is the production configuration and currently has no `d1_databases` entry or `DB` binding. `wrangler.local.jsonc` defines a local D1 binding used for local development and CI tests only.
+`.github/workflows/deploy-free.yml` publishes the application to the existing Cloudflare Worker after CI succeeds on `main`. It uses the repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`; it does not need an operator token or a D1 database ID.
 
-The Worker requires D1 for persistence-dependent routes. Without `DB`, these routes return `503 D1 persistence unavailable`; a successful local D1 test is not evidence of production persistence. A production deployment must not be described as persistent until a real D1 resource, binding, and authorized migration procedure are explicitly configured and verified.
+This connected Cloudflare account already has 10 D1 databases. The Workers Free limit is 10 databases per account, so this workflow does not create a database, delete another project's database, or upgrade the account. It deploys in `STATIC_READ_ONLY` mode:
+- The catalog, scientific visualizations and recorded Voyager control preview are available.
+- Health and build provenance endpoints remain available.
+- D1-backed message persistence and write APIs are disabled; the UI must not claim a message was persisted.
+- JPL Horizons ephemeris requests are disabled in this mode to avoid unauthenticated upstream calls.
+- `ALLOW_PHYSICAL_TRANSMISSION=false` is enforced by the generated configuration.
 
-## Controlled deployment procedure
+This is a real public web deployment, but it is not a persistent messaging service. To enable D1-backed persistence while staying at $0, an unused D1 slot must first be freed by the account owner or a separate free-tier account must be explicitly configured. This repository will not delete or reuse another project's database automatically.
 
-1. Run catalog verification, tests, typecheck, secret scan, license inventory and build on the exact proposed SHA.
-2. Obtain explicit owner approval and use a scoped Cloudflare API token and account ID stored as protected secrets. Do not add credentials to source, frontend, logs, or artifacts.
-3. Review `wrangler.jsonc`. Add a real D1 binding only after the database is explicitly authorized/provisioned; preserve `ALLOW_PHYSICAL_TRANSMISSION=false`.
-4. Review the deploy preflight against the actual production configuration; do not assume it detects an absent D1 binding unless the test proves that.
-5. Do not run remote D1 migrations until separately authorized.
-6. If deployment is later approved, verify the deployed source SHA, environment, D1 binding, health response, static assets, truth labels and mobile layout.
+## D1-backed deployment
 
-No paid resource is required for a Worker/Assets-only baseline where account quotas allow it, but that baseline is not a persistent D1 service. The repository does not create billing resources automatically.
+`.github/workflows/deploy.yml` remains a separate, manually triggered path. It requires `OPERATOR_API_TOKEN` and `STELLAR_THREAD_D1_DATABASE_ID` in addition to the Cloudflare credentials. Do not run it until an authorized D1 database exists and the production migration plan has been reviewed. It must preserve `ALLOW_PHYSICAL_TRANSMISSION=false`.
+
+## Verification
+
+The free deployment workflow verifies:
+1. The deployed homepage and build endpoint respond.
+2. The deployed source SHA matches the CI-tested `main` commit.
+3. The Worker reports `STATIC_READ_ONLY`, no D1 binding and physical transmission disabled.
+4. The threads API remains unavailable without D1 and ephemeris requests are blocked in static mode.
 
 ## Safety boundary
 
-Deployment does not authorize physical transmission. No transmitter-control endpoint is exposed, and `ALLOW_PHYSICAL_TRANSMISSION=false` must remain unchanged.
-
-## Estado de verdad
-
-This document distinguishes official data, derived estimates, authentic recorded observations, synthetic fixtures, human review, stale data and unavailable data. No peak, score or coincidence is presented as an extraterrestrial message.
+Deployment does not authorize physical transmission. No transmitter-control endpoint is enabled. Public, imported, recorded and synthetic data remain separately labelled; no score or coincidence is presented as an extraterrestrial message.

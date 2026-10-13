@@ -1,0 +1,66 @@
+name: Deploy Cloudflare Free Read-Only
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      PRODUCTION_URL: https://stellar-thread.simondalmasso44.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify zero-cost deployment credentials
+        run: test -n "$CLOUDFLARE_ACCOUNT_ID" && test -n "$CLOUDFLARE_API_TOKEN"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - run: npm ci --no-audit --no-fund
+      - run: npm run test:core && npm run typecheck && npm run build && npm run build:manifest
+      - name: Capture exact tree and build time
+        run: |
+          echo "BUILD_TREE_SHA=$(git rev-parse HEAD^{tree})" >> "$GITHUB_ENV"
+          echo "BUILD_TIME_UTC=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
+      - name: Render no-D1 production config
+        run: node scripts/render-wrangler-free.mjs
+        env:
+          BUILD_SOURCE_SHA: ${{ env.SOURCE_SHA }}
+          BUILD_TREE_SHA: ${{ env.BUILD_TREE_SHA }}
+          BUILD_TIME_UTC: ${{ env.BUILD_TIME_UTC }}
+          BUILD_WORKFLOW_RUN_ID: ${{ github.run_id }}
+      - name: Deploy public dashboard and read-only API
+        run: npx wrangler deploy --config .wrangler.free.json
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Verify deployed SHA, static mode and safety gates
+        run: |
+          for i in $(seq 1 15); do curl -fsS "$PRODUCTION_URL/" -o /dev/null && break || sleep 2; done
+          curl --fail --silent --show-error "$PRODUCTION_URL/" -o homepage.html
+          curl --fail --silent --show-error "$PRODUCTION_URL/api/v1/health" -o health.json
+          curl --fail --silent --show-error "$PRODUCTION_URL/api/v1/build" -o build.json
+          node -e 'const fs=require("node:fs");const h=JSON.parse(fs.readFileSync("health.json"));const b=JSON.parse(fs.readFileSync("build.json"));if(b.data.sourceSha!==process.env.SOURCE_SHA)throw new Error("deployed SHA mismatch");if(h.deploymentMode!=="STATIC_READ_ONLY"||h.persistence!=="UNAVAILABLE"||h.physicalTransmissionEnabled!==false)throw new Error("read-only safety invariant failed");console.log(JSON.stringify({sourceSha:b.data.sourceSha,deploymentMode:h.deploymentMode,persistence:h.persistence,physicalTransmissionEnabled:h.physicalTransmissionEnabled}));'
+          threads_status=$(curl --silent --show-error -o threads.json -w '%{http_code}' "$PRODUCTION_URL/api/v1/threads")
+          test "$threads_status" = "503"
+          moon_status=$(curl --silent --show-error -o moon.json -w '%{http_code}' "$PRODUCTION_URL/api/v1/moon/geometry?mode=ephemeris&startUtc=2026-10-13T00%3A00%3A00.000Z&stationLatDeg=0&stationLonDeg=0&stationElevationM=0&frequencyHz=1000000000")
+          test "$moon_status" = "503"
+          grep -q 'D1 persistence unavailable' threads.json
+          grep -q 'disabled in static read-only deployment' moon.json
+        env:
+          SOURCE_SHA: ${{ env.SOURCE_SHA }}
+          PRODUCTION_URL: ${{ env.PRODUCTION_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
