@@ -1,57 +1,57 @@
-# Stellar-thread
+# Stellar Thread
 
-**Real Interstellar Messaging & Listening Console**
+**Open-source interstellar messaging simulator and radio-astronomy DSP lab with reproducible data, propagation models, and explicit no-transmission safety gates.**
 
-Stellar-thread es una webapp full-stack y laboratorio DSP verificable para componer mensajes interestelares, preparar propuestas de transmisión, calcular propagación física, procesar observaciones radioastronómicas y revisar candidatos sin fingir conversación instantánea ni respuestas extraterrestres.
+Stellar Thread is a proposed research-software project for encoding hypothetical interstellar messages, modelling light-time, and examining radio-astronomy data with explicit provenance. It is not a real communications service.
+
+## Capability status
+
+| State | What it means here |
+|---|---|
+| **Implemented and CI-tested** | CMP-1 encoder/decoder; deterministic propagation model; Cloudflare Worker routes; D1 migrations and local-D1 integration tests; Python DSP pipeline; reproducible Voyager 1 radio-observation control and derived preview; desktop/mobile browser tests. These capabilities are present on this PR branch, not yet in `main`. |
+| **Experimental** | Candidate-ranking heuristics, the versioned nearby-target snapshot, and the Moon Relay ephemeris path. They are research features, not validated operational systems. |
+| **Not connected** | Production D1: `wrangler.jsonc` currently has no `DB` binding. Only `wrangler.local.jsonc` binds local D1 for CI/development. No live observatory or DSN feed is connected. No public Voyager engineering telemetry is available to this app. |
+| **Unavailable** | Voyager command/uplink channel, spacecraft repair/control, physical RF transmission, and optical emission. No such operation has been performed. |
 
 ## Reality V2
 
-La interfaz tiene cinco áreas primarias: `THREADS`, `UNIVERSE`, `LISTEN`, `LAB` y `MISSION`.
+- Five primary areas: `THREADS`, `UNIVERSE`, `LISTEN`, `LAB`, and `MISSION`.
+- D1-backed persistence is exercised by local Worker/CI tests. When the `DB` binding is absent, persistence-dependent routes return `503`; there is no in-memory or browser-storage substitute for the authoritative ledger.
+- A message stays in preparation states until an authorized operator registers a valid persisted `TransmissionProof`. Hashes prove byte integrity, not that a physical event happened.
+- Propagation uses a persisted UTC timestamp, catalog distance, and `c = 299,792,458 m/s`. Animation does not change scientific state.
+- The nearby-target catalog is a versioned snapshot, not a live catalog query. `npm run catalog:verify` checks its normalized and generated copies.
+- CMP-1 uses CRC-32, SHA-256 and FEC repetition-3; other repetition values are rejected.
+- The public Voyager 1 control is a recorded 2016 radio-astronomy observation of a known human-made spacecraft. It is classified `RECORDED_AUTHENTIC`, `HUMAN_TECHNOLOGICAL_CONTROL`, and `extraterrestrial=false`. It is not engineering telemetry and does not provide a command channel.
+- The Moon Relay mean-distance mode is educational. Its experimental ephemeris path is not approved for operational EME planning; upstream-policy and caching safeguards must be resolved before any production use.
+- Synthetic demonstrations remain labeled synthetic. No coverage is claimed without verified observation records.
 
-- Ledger persistente en Cloudflare D1 para hilos, mensajes CMP, propuestas, pruebas instrumentales y revisiones humanas.
-- Un mensaje permanece `DRAFT`, `ENCODED` o `PROPOSAL_READY` hasta que un operador autorizado registra una `TransmissionProof` válida. Sólo entonces puede pasar a `TRANSMITTED_PROOFED` e `IN_FLIGHT`.
-- Propagación calculada con `c = 299.792.458 m/s`, timestamp persistido, distancia catalogada y límites físicos deterministas.
-- Vista física con línea de visión, esfera isotrópica o cono direccional. La vista narrativa está marcada `NOT TO SCALE`; ningún glifo visual se presenta como paquete físico.
-- Catálogo versionado de seis objetivos cercanos con identificadores Gaia, HIP o SIMBAD, época astrométrica, movimiento propio, velocidad radial cuando está disponible e incertidumbres declaradas.
-- Cálculo de punto de puntería futuro por movimiento propio y ensanchamiento de incertidumbre cuando faltan parámetros.
-- `CMP-1` funcional con preámbulo, versión, perfil, destino, época, payload, CRC-32, SHA-256 y FEC repetition-3. Cualquier valor de repetición distinto de `3` se rechaza.
-- API Cloudflare Worker `/api/v1`, autenticación Bearer separada para operaciones, respuestas 500 saneadas, rate limit básico y SSE etiquetado exclusivamente como `SYNTHETIC TEST STREAM`.
-- `cosmic-listener` Python con señales deterministas, STFT, de-Doppler, periodicidad, bursts, rechazo RFI on/off-source, coincidencia multiestación, NPY, SigMF y adaptador opcional `blimpy`.
-- Control auténtico y reproducible de Voyager 1 derivado del archivo público de Berkeley SETI/Breakthrough Listen. Está clasificado `HUMAN_TECHNOLOGICAL_CONTROL`, `RECORDED_AUTHENTIC` y `extraterrestrial=false`.
-- Moon Relay con fallback de distancia lunar media y contrato de adaptador JPL Horizons para una planificación EME operativa.
-- Silence Map sin afirmaciones de cobertura cuando no existen horas de observación verificadas.
-
-## Estado operativo
+## Operational truth
 
 ```text
-PERSISTENCE_IMPLEMENTED=D1
+PR_IMPLEMENTATION=OPEN_FOR_REVIEW
 PRODUCTION_DEPLOYED=NO
+PRODUCTION_D1_BINDING=ABSENT
 LIVE_OBSERVATORY_CONNECTED=NO
-PHYSICAL_TRANSMISSIONS_EXECUTED=NO
-RF_GATE=CLOSED
-OPTICAL_ACTUATION=ABSENT
-AUTHENTIC_DATASET=VOYAGER_1_HUMAN_CONTROL
-EXTRATERRESTRIAL_CANDIDATES=0
+VOYAGER_ENGINEERING_TELEMETRY=NOT_CONNECTED
+VOYAGER_COMMAND_CHANNEL=NOT_AVAILABLE
+PHYSICAL_RF_TRANSMISSION=NOT_PERFORMED
+OPTICAL_EMISSION=NOT_PERFORMED
 ```
 
-La persistencia D1, migraciones y Worker fueron verificados localmente en CI. El despliegue productivo requiere credenciales Cloudflare, ejecución manual del workflow protegido y aprobación del owner. El software no contiene una ruta pública para controlar SDR TX, amplificadores, transmisores de alta potencia ni láseres.
+The local D1 migration path is `npm run db:migrate:local`. Do not deploy the current production Wrangler configuration as a persistent service until a real D1 resource and binding have been explicitly provisioned and reviewed. No remote migration or production deployment is part of this PR.
 
-## Desarrollo reproducible
+## Reproducible development
 
 ```bash
 npm ci
-npx wrangler d1 migrations apply DB --local
+npm run db:migrate:local
 npm run dev
 ```
 
-Worker local:
+In a second terminal, run the local Worker with a **dummy local token only**:
 
 ```bash
-npx wrangler dev --local --port 8787 \
-  --var OPERATOR_API_TOKEN:<token-local-largo> \
-  --var BUILD_SOURCE_SHA:local \
-  --var BUILD_TREE_SHA:local \
-  --var BUILD_TIME_UTC:2026-08-05T00:00:00.000Z
+npx wrangler dev --local --config wrangler.local.jsonc --port 8787 --var OPERATOR_API_TOKEN:test-operator-token
 ```
 
 DSP:
@@ -62,41 +62,30 @@ cosmic-listener doctor
 cosmic-listener observe --synthetic --duration 4 --output artifacts/candidate.json
 ```
 
-## Verificación
+## Verification commands
 
 ```bash
-npm ci
-npm run test:core
-npm run typecheck
-npm run build
+npm run catalog:verify
 npm run audit:secrets
 npm run licenses
+npm run test:core
+npm run test:python
+npm run typecheck
+npm run build
 npm run test:worker
 npm run test:e2e
-python -m unittest discover -s listener/tests -p 'test_*.py' -v
 ```
 
-GitHub Actions verifica en el SHA exacto:
+`npm run test:worker` requires the local Worker to be running. CI uses a local D1 database and is not evidence that production D1 is configured.
 
-- snapshot de fuente y árbol Git;
-- lockfile y `npm ci`;
-- tests TypeScript y Python;
-- typecheck y build;
-- D1 local + Worker integration;
-- autorización de endpoints operator-only;
-- Playwright desktop/mobile y capturas UX;
-- DSP sintético;
-- descarga, hash, derivación y replay del control auténtico Voyager;
-- secret scan, inventario de licencias y merge verification.
+## Documentation
 
-## Gates físicos y regulatorios
+Start at [docs/INDEX.md](docs/INDEX.md). The source and generated-data relationships are documented there and in [Data Sources](docs/DATA_SOURCES.md), [Product Truth](docs/PRODUCT_TRUTH.md), and [Deployment](docs/DEPLOYMENT.md).
 
-`POST /api/v1/transmissions/proposal` sólo crea una propuesta persistida y bloqueada. Una transmisión física exige instalación y operador autorizados, banda y modulación permitidas, identificación reglamentaria, control de interferencias, revisión científica, evidencia instrumental y aprobación explícita del owner. `ALLOW_PHYSICAL_TRANSMISSION=false` permanece como invariante de despliegue y no habilita hardware.
+## Safety boundary
 
-## Documentación
+This software has no public transmitter-control endpoint. A proposal is not a transmission; a hash is not proof of emission; DSN station activity is not a spacecraft-health report. No physical RF or optical emission is performed.
 
-La arquitectura, Truth Layer, CMP-1, catálogo, propagación, EME, canal óptico, DSP, RFI, lifecycle de candidatos, fuentes, seguridad, regulación, pruebas, operación, despliegue y recuperación están documentados en `docs/`.
+## License
 
-## Licencia
-
-MIT. Las dependencias conservan sus licencias originales; revisar `THIRD_PARTY_NOTICES.md` y el inventario generado por CI antes de una release.
+MIT. See [LICENSE](LICENSE) and [Third-Party Notices](THIRD_PARTY_NOTICES.md). External dataset terms remain source-specific.
