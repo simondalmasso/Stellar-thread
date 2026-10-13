@@ -100,3 +100,6 @@
  .dashboard-log-entry p{font-size:8px}
  .dashboard-spectrum-meta{font-size:8px}
 }
+
+.global-truth .sync-static{color:#e8c47c}
+.dashboard-signal-note strong{display:block;margin-bottom:3px}.dashboard-signal-note span{display:block;color:#83948e}
