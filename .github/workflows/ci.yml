@@ -49,6 +49,9 @@ jobs:
       - run: npm run build
       - run: npm run build:manifest
         env: { SOURCE_SHA: '${{ env.SOURCE_SHA }}' }
+      - name: Validate zero-cost static deployment config
+        run: node scripts/render-wrangler-free.mjs
+        env: { BUILD_SOURCE_SHA: '${{ env.SOURCE_SHA }}' }
       - name: D1 Worker happy path and restart
         run: |
           mkdir -p artifacts/worker-integration

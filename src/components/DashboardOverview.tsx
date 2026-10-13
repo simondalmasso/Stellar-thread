@@ -117,7 +117,7 @@ export function DashboardOverview({ target, targets, proof, propagation, reduced
           <span>{VOYAGER_CONTROL.centerFrequencyMHz.toFixed(6)} MHz</span>
           <span>{VOYAGER_CONTROL.previewDimensions[0]} × {VOYAGER_CONTROL.previewDimensions[1]}</span>
         </div>
-        <p className="dashboard-signal-note">NO ES UNA CAPTURA EN VIVO · Known human spacecraft downlink, not an extraterrestrial signal.</p>
+        <p className="dashboard-signal-note"><strong>NO ES UNA CAPTURA EN VIVO</strong><span>Known human spacecraft downlink, not an extraterrestrial signal.</span></p>
       </section>
       <section className="dashboard-log">
         <header className="dashboard-panel-head"><span>03 / REPRODUCIBLE EVENT LOG</span><span>UTC</span></header>
