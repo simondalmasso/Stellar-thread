@@ -7,7 +7,6 @@ import numpy as np
 
 PINNED_PARENT_SHA256='c9a9a54f4140e3754ffb2455fae4eeb2eb70c8207123116ee953e4fce15c36ac'
 SOURCE_URL='http://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5'
-DB_QUANTUM=1e-6
 
 def sha(path:Path)->str:
  h=hashlib.sha256()
