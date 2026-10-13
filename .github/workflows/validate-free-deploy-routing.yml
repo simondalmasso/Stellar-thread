@@ -1,0 +1,27 @@
+name: Validate Worker-first API asset routing
+on:
+  push:
+    paths:
+      - 'wrangler.jsonc'
+      - 'scripts/render-wrangler-free.mjs'
+      - 'scripts/render-wrangler-production.mjs'
+      - 'tests/free-deploy-routing.test.mjs'
+      - '.github/workflows/validate-free-deploy-routing.yml'
+  pull_request:
+    paths:
+      - 'wrangler.jsonc'
+      - 'scripts/render-wrangler-free.mjs'
+      - 'scripts/render-wrangler-production.mjs'
+      - 'tests/free-deploy-routing.test.mjs'
+      - '.github/workflows/validate-free-deploy-routing.yml'
+permissions:
+  contents: read
+jobs:
+  routing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tests/free-deploy-routing.test.mjs
