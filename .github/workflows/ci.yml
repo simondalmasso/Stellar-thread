@@ -61,11 +61,11 @@ jobs:
           npx wrangler dev --local --config wrangler.local.jsonc --port 8787 --var APP_ENV:test --var OPERATOR_API_TOKEN:test-operator-token --var BUILD_SOURCE_SHA:$SOURCE_SHA --var BUILD_TREE_SHA:$(git rev-parse HEAD^{tree}) --var BUILD_TIME_UTC:2026-08-07T05:00:00.000Z > artifacts/worker-integration/first.log 2>&1 &
           P=$!; for i in {1..45}; do curl -fsS http://127.0.0.1:8787/api/v1/health >/dev/null && break || sleep 1; done
           npm run test:worker
-          kill $P; wait $P || true
+          kill $P 2>/dev/null || true; wait $P 2>/dev/null || true
           npx wrangler dev --local --config wrangler.local.jsonc --port 8787 --var APP_ENV:test --var OPERATOR_API_TOKEN:test-operator-token --var BUILD_SOURCE_SHA:$SOURCE_SHA --var BUILD_TREE_SHA:$(git rev-parse HEAD^{tree}) --var BUILD_TIME_UTC:2026-08-07T05:00:00.000Z > artifacts/worker-integration/restart.log 2>&1 &
           P=$!; for i in {1..45}; do curl -fsS http://127.0.0.1:8787/api/v1/health >/dev/null && break || sleep 1; done
           node tests/worker-reload.mjs
-          kill $P; wait $P || true
+          kill $P 2>/dev/null || true; wait $P 2>/dev/null || true
       - run: node scripts/artifact-context.mjs artifacts/worker-integration worker-integration
       - run: npx playwright install --with-deps chromium && npm run test:e2e
       - run: node scripts/artifact-context.mjs artifacts/ux-evidence ux-evidence
