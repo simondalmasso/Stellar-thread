@@ -2,13 +2,13 @@
 
 **Open-source interstellar messaging simulator and radio-astronomy DSP lab with reproducible data, propagation models, and explicit no-transmission safety gates.**
 
-Stellar Thread is a proposed research-software project for encoding hypothetical interstellar messages, modelling light-time, and examining radio-astronomy data with explicit provenance. It is not a real communications service.
+Stellar Thread is an open-source research-software project for encoding hypothetical interstellar messages, modelling light-time, and examining radio-astronomy data with explicit provenance. It is not a real communications service. The public dashboard is deployed at [stellar-thread.simondalmasso44.workers.dev](https://stellar-thread.simondalmasso44.workers.dev/) in free `STATIC_READ_ONLY` mode.
 
 ## Capability status
 
 | State | What it means here |
 |---|---|
-| **Implemented and CI-tested** | CMP-1 encoder/decoder; deterministic propagation model; Cloudflare Worker routes; D1 migrations and local-D1 integration tests; Python DSP pipeline; reproducible Voyager 1 radio-observation control and derived preview; desktop/mobile browser tests. These capabilities are present on this PR branch, not yet in `main`. |
+| **Implemented and CI-tested** | CMP-1 encoder/decoder; deterministic propagation model; Cloudflare Worker routes; D1 migrations and local-D1 integration tests; Python DSP pipeline; reproducible Voyager 1 radio-observation control and derived preview; desktop/mobile browser tests. The implementation is merged into `main` and passes current CI. |
 | **Experimental** | Candidate-ranking heuristics, the versioned nearby-target snapshot, and the Moon Relay ephemeris path. They are research features, not validated operational systems. |
 | **Not connected** | Production D1: `wrangler.jsonc` currently has no `DB` binding. Only `wrangler.local.jsonc` binds local D1 for CI/development. No live observatory or DSN feed is connected. No public Voyager engineering telemetry is available to this app. |
 | **Unavailable** | Voyager command/uplink channel, spacecraft repair/control, physical RF transmission, and optical emission. No such operation has been performed. |
@@ -30,6 +30,7 @@ Stellar Thread is a proposed research-software project for encoding hypothetical
 ```text
 PR_IMPLEMENTATION=MERGED_TO_MAIN
 PRODUCTION_DEPLOYMENT_MODE=STATIC_READ_ONLY
+PRODUCTION_DASHBOARD=https://stellar-thread.simondalmasso44.workers.dev/
 PRODUCTION_D1_BINDING=ABSENT
 LIVE_OBSERVATORY_CONNECTED=NO
 VOYAGER_ENGINEERING_TELEMETRY=NOT_CONNECTED
