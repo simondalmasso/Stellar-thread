@@ -48,14 +48,23 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Verify deployed SHA, static mode and safety gates
         run: |
-          for i in $(seq 1 15); do curl -fsS "$PRODUCTION_URL/" -o /dev/null && break || sleep 2; done
-          curl --fail --silent --show-error "$PRODUCTION_URL/" -o homepage.html
-          curl --fail --silent --show-error "$PRODUCTION_URL/api/v1/health" -o health.json
-          curl --fail --silent --show-error "$PRODUCTION_URL/api/v1/build" -o build.json
-          node -e 'const fs=require("node:fs");const h=JSON.parse(fs.readFileSync("health.json"));const b=JSON.parse(fs.readFileSync("build.json"));if(b.data.sourceSha!==process.env.SOURCE_SHA)throw new Error("deployed SHA mismatch");if(h.deploymentMode!=="STATIC_READ_ONLY"||h.persistence!=="UNAVAILABLE"||h.physicalTransmissionEnabled!==false)throw new Error("read-only safety invariant failed");console.log(JSON.stringify({sourceSha:b.data.sourceSha,deploymentMode:h.deploymentMode,persistence:h.persistence,physicalTransmissionEnabled:h.physicalTransmissionEnabled}));'
-          threads_status=$(curl --silent --show-error -o threads.json -w '%{http_code}' "$PRODUCTION_URL/api/v1/threads")
+          verified=0
+          for i in $(seq 1 20); do
+            if curl --fail --silent --show-error "$PRODUCTION_URL/" -o homepage.html &&
+              grep -q '<title>Stellar Thread</title>' homepage.html &&
+              curl --fail --silent --show-error -D health.headers -H 'Accept: application/json' "$PRODUCTION_URL/api/v1/health" -o health.json &&
+              grep -qi 'content-type: application/json' health.headers &&
+              curl --fail --silent --show-error -D build.headers -H 'Accept: application/json' "$PRODUCTION_URL/api/v1/build" -o build.json &&
+              grep -qi 'content-type: application/json' build.headers &&
+              node -e 'const fs=require("node:fs");const h=JSON.parse(fs.readFileSync("health.json"));const b=JSON.parse(fs.readFileSync("build.json"));if(b.data.sourceSha!==process.env.SOURCE_SHA)throw new Error("deployed SHA mismatch");if(h.deploymentMode!=="STATIC_READ_ONLY"||h.persistence!=="UNAVAILABLE"||h.physicalTransmissionEnabled!==false)throw new Error("read-only safety invariant failed")' >/dev/null 2>&1
+            then verified=1; break; fi
+            sleep 2
+          done
+          test "$verified" = "1"
+          node -e 'const fs=require("node:fs");const h=JSON.parse(fs.readFileSync("health.json"));const b=JSON.parse(fs.readFileSync("build.json"));console.log(JSON.stringify({sourceSha:b.data.sourceSha,deploymentMode:h.deploymentMode,persistence:h.persistence,physicalTransmissionEnabled:h.physicalTransmissionEnabled}));'
+          threads_status=$(curl --silent --show-error -o threads.json -w '%{http_code}' -H 'Accept: application/json' "$PRODUCTION_URL/api/v1/threads")
           test "$threads_status" = "503"
-          moon_status=$(curl --silent --show-error -o moon.json -w '%{http_code}' "$PRODUCTION_URL/api/v1/moon/geometry?mode=ephemeris&startUtc=2026-10-13T00%3A00%3A00.000Z&stationLatDeg=0&stationLonDeg=0&stationElevationM=0&frequencyHz=1000000000")
+          moon_status=$(curl --silent --show-error -o moon.json -w '%{http_code}' -H 'Accept: application/json' "$PRODUCTION_URL/api/v1/moon/geometry?mode=ephemeris&startUtc=2026-10-13T00%3A00%3A00.000Z&stationLatDeg=0&stationLonDeg=0&stationElevationM=0&frequencyHz=1000000000")
           test "$moon_status" = "503"
           grep -q 'D1 persistence unavailable' threads.json
           grep -q 'disabled in static read-only deployment' moon.json
