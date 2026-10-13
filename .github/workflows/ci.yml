@@ -107,6 +107,15 @@ jobs:
           || curl --fail --location --retry 3 --connect-timeout 30 http://blpd0.ssl.berkeley.edu/Voyager_data/Voyager1.single_coarse.fine_res.h5 -o source/Voyager1.single_coarse.fine_res.h5
       - run: echo 'c9a9a54f4140e3754ffb2455fae4eeb2eb70c8207123116ee953e4fce15c36ac  source/Voyager1.single_coarse.fine_res.h5' | sha256sum --check -
       - run: python listener/scripts/derive_voyager.py source/Voyager1.single_coarse.fine_res.h5 --out artifacts/authentic-voyager-derived
+      - name: Emit generated JSON for deterministic source update
+        if: always()
+        run: |
+          if [ -f artifacts/authentic-voyager-derived/manifest.json ]; then
+            printf 'GENERATED_MANIFEST_B64=%s\\n' "$(base64 -w0 artifacts/authentic-voyager-derived/manifest.json)"
+          fi
+          if [ -f artifacts/authentic-voyager-derived/voyager-control-preview.json ]; then
+            printf 'GENERATED_PREVIEW_B64=%s\\n' "$(base64 -w0 artifacts/authentic-voyager-derived/voyager-control-preview.json)"
+          fi
       - run: diff -u data/authentic/voyager1-control-manifest.json artifacts/authentic-voyager-derived/manifest.json && diff -u data/authentic/voyager-control-preview.json artifacts/authentic-voyager-derived/voyager-control-preview.json && cmp data/authentic/voyager-control-preview.json src/data/voyager-control-preview.generated.json
       - run: echo '4b8c12fc87a59c91a0155d9f65298c2b145586b1ca96ddd4e69d342036b8c7f1  artifacts/authentic-voyager-derived/voyager-control-waterfall.npy' | sha256sum --check - && echo 'd7c03d971f1940fd1e9b1d9362a99f2b17c72bf5d8526108d5f9e2b614a5c765  artifacts/authentic-voyager-derived/voyager-control-preview.json' | sha256sum --check -
       - run: node scripts/artifact-context.mjs artifacts/authentic-voyager-derived authentic-voyager-derived
