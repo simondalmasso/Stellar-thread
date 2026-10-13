@@ -1,6 +1,7 @@
 # Data Sources and Research Ledger
 
-**Initial baseline review:** 2026-08-05.  
+**Initial baseline review:** 2026-08-05.
+
 **Revalidation date:** 2026-10-13, for the sources listed in the revalidation ledger below only. The legacy table retains 2026-08-05 as its last review date; not every legacy URL was rechecked in this pass.
 
 | Legacy source | Pattern adopted | URL |
