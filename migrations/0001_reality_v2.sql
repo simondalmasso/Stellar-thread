@@ -1,0 +1,15 @@
+PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS threads (id TEXT PRIMARY KEY,target_id TEXT NOT NULL,created_at_utc TEXT NOT NULL,updated_at_utc TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS messages (id TEXT PRIMARY KEY,thread_id TEXT NOT NULL,target_id TEXT NOT NULL,text TEXT NOT NULL,state TEXT NOT NULL,cmp_profile TEXT,cmp_version TEXT,payload_sha256 TEXT,encoded_bits INTEGER,created_at_utc TEXT NOT NULL,updated_at_utc TEXT NOT NULL,truth_class TEXT NOT NULL,FOREIGN KEY(thread_id) REFERENCES threads(id));
+CREATE TABLE IF NOT EXISTS cmp_frames (id TEXT PRIMARY KEY,message_id TEXT NOT NULL,frame_json TEXT NOT NULL,frame_sha256 TEXT NOT NULL,created_at_utc TEXT NOT NULL,FOREIGN KEY(message_id) REFERENCES messages(id));
+CREATE TABLE IF NOT EXISTS transmission_proposals (id TEXT PRIMARY KEY,message_id TEXT NOT NULL,target_id TEXT NOT NULL,proposal_json TEXT NOT NULL,status TEXT NOT NULL,created_at_utc TEXT NOT NULL,FOREIGN KEY(message_id) REFERENCES messages(id));
+CREATE TABLE IF NOT EXISTS transmission_proofs (id TEXT PRIMARY KEY,message_id TEXT NOT NULL,target_id TEXT NOT NULL,status TEXT NOT NULL,proof_json TEXT NOT NULL,transmitted_at_utc TEXT,payload_sha256 TEXT NOT NULL,proof_artifact_sha256 TEXT,created_at_utc TEXT NOT NULL,FOREIGN KEY(message_id) REFERENCES messages(id));
+CREATE TABLE IF NOT EXISTS observatories (id TEXT PRIMARY KEY,public_name TEXT NOT NULL,metadata_json TEXT NOT NULL,truth_class TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS observations (id TEXT PRIMARY KEY,target_id TEXT,station_id TEXT,observed_at_utc TEXT NOT NULL,source_type TEXT NOT NULL,manifest_sha256 TEXT NOT NULL,metadata_json TEXT NOT NULL,UNIQUE(manifest_sha256));
+CREATE TABLE IF NOT EXISTS observation_assets (id TEXT PRIMARY KEY,observation_id TEXT NOT NULL,kind TEXT NOT NULL,sha256 TEXT NOT NULL,metadata_json TEXT NOT NULL,FOREIGN KEY(observation_id) REFERENCES observations(id));
+CREATE TABLE IF NOT EXISTS candidates (id TEXT PRIMARY KEY,observation_id TEXT,state TEXT NOT NULL,candidate_json TEXT NOT NULL,created_at_utc TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS candidate_reviews (id TEXT PRIMARY KEY,candidate_id TEXT NOT NULL,operator_id TEXT NOT NULL,state TEXT NOT NULL,notes TEXT,created_at_utc TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY,source_json TEXT NOT NULL,updated_at_utc TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS builds (source_sha TEXT PRIMARY KEY,tree_sha TEXT NOT NULL,build_time_utc TEXT NOT NULL,workflow_run_id TEXT,deployment_id TEXT,environment TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id,created_at_utc);
+CREATE INDEX IF NOT EXISTS idx_proofs_message ON transmission_proofs(message_id,created_at_utc);

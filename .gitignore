@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.build-core/
+.playwright/
+test-results/
+playwright-report/
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+!.env.example
+.DS_Store
+
+artifacts/
+
+.wrangler.free.json

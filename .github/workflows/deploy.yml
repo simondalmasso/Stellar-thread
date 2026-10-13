@@ -1,0 +1,65 @@
+name: Deploy Cloudflare Worker
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.13', cache: pip }
+      - run: npm ci --no-audit --no-fund
+      - run: python -m pip install -c listener/constraints.txt -e ./listener
+      - name: Preflight exact source and protected configuration
+        run: npm run deploy:preflight
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPERATOR_API_TOKEN: ${{ secrets.OPERATOR_API_TOKEN }}
+          STELLAR_THREAD_D1_DATABASE_ID: ${{ secrets.STELLAR_THREAD_D1_DATABASE_ID }}
+          ALLOW_PHYSICAL_TRANSMISSION: 'false'
+      - run: npm run test:core && npm run test:python && npm run typecheck && npm run build
+      - name: Capture exact tree/build time
+        run: |
+          echo "BUILD_TREE_SHA=$(git rev-parse HEAD^{tree})" >> "$GITHUB_ENV"
+          echo "BUILD_TIME_UTC=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
+      - name: Render production config without placeholders
+        run: node scripts/render-wrangler-production.mjs
+        env:
+          STELLAR_THREAD_D1_DATABASE_ID: ${{ secrets.STELLAR_THREAD_D1_DATABASE_ID }}
+          BUILD_SOURCE_SHA: ${{ github.sha }}
+          BUILD_TREE_SHA: ${{ env.BUILD_TREE_SHA }}
+          BUILD_TIME_UTC: ${{ env.BUILD_TIME_UTC }}
+          BUILD_WORKFLOW_RUN_ID: ${{ github.run_id }}
+      - name: Provision operator token as Worker secret
+        run: printf '%s' "$OPERATOR_API_TOKEN" | npx wrangler secret put OPERATOR_API_TOKEN --config .wrangler.production.json
+        env:
+          OPERATOR_API_TOKEN: ${{ secrets.OPERATOR_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Apply D1 migrations
+        run: npx wrangler d1 migrations apply DB --remote --config .wrangler.production.json
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy public web and API only
+        run: npx wrangler deploy --config .wrangler.production.json | tee deployment.log
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Post-deploy smoke
+        run: |
+          test -n "$PRODUCTION_URL"
+          curl --fail --silent --show-error "$PRODUCTION_URL/api/v1/health" | tee health.json
+          curl --fail --silent --show-error "$PRODUCTION_URL/api/v1/build" | tee build.json
+          node -e "const b=require('./build.json'); if(b.data.sourceSha!=='${{ github.sha }}'||b.data.environment!=='production') process.exit(1)"
+          curl --fail --silent --show-error "$PRODUCTION_URL/" >/dev/null
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}

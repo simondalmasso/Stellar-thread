@@ -1,0 +1,27 @@
+import preview from '../data/voyager-control-preview.generated.json' with { type: 'json' };
+
+export const VOYAGER_CONTROL = {
+  id:'voyager1-gbt-2016-control',
+  title:'Voyager 1 downlink — technological control',
+  sourceTruth:'RECORDED_AUTHENTIC' as const,
+  viewTruth:'DERIVED_FROM_RECORDED_AUTHENTIC' as const,
+  classification:'HUMAN_TECHNOLOGICAL_CONTROL',
+  extraterrestrial:false,
+  source:'Berkeley SETI / Breakthrough Listen public Voyager exercise',
+  parentFile:'Voyager1.single_coarse.fine_res.h5',
+  parentSha256:preview.parentSha256,
+  npySha256:preview.npySha256,
+  previewSha256:'d7c03d971f1940fd1e9b1d9362a99f2b17c72bf5d8526108d5f9e2b614a5c765',
+  derivationManifestSha256:preview.sourceManifestSha256,
+  observedAtUtc:'2016-09-19T18:46:13.000Z',
+  centerFrequencyMHz:8419.297027744021,
+  driftHzPerSecond:-0.37410601541473354,
+  snr:15.015602111816406,
+  channelWidthHz:2.7939677238464355,
+  manifestPath:'data/authentic/voyager1-control-manifest.json',
+  previewDimensions:preview.previewDimensions,
+  sourceDimensions:preview.sourceDimensions,
+  transformation:preview.transformation,
+  waterfall:preview.values,
+  limitations:['Visible pixels are derived from the versioned authentic NPY asset','Known human spacecraft downlink; not extraterrestrial'],
+};
